@@ -1,0 +1,762 @@
+"use client"
+
+import { useRef, useEffect, useState, useCallback } from 'react'
+import { GameState, GameConfig, Position } from '@/types/game'
+import {
+  createInitialGameState,
+  updatePlayerPosition,
+  spawnChaser,
+  spawnBouncingCircle,
+  spawnStarGenerator,
+  spawnTriangle,
+  spawnPentagon,
+  spawnLightning,
+  spawnFireBall,
+  spawnDiagonalHunter,
+  spawnMine,
+  spawnLaser,
+  spawnTeleportCube,
+  spawnSpinner,
+  spawnGhostBall,
+  spawnSnake,
+  createProjectilesFromStar,
+  updateGameEntities,
+  checkGameOver,
+  calculateCurrentSpawnIntervals
+} from '@/lib/gameLogic'
+
+interface GameCanvasProps {
+  onGameOver: (score: number) => void
+  onScoreUpdate: (score: number) => void
+  onEncounteredEnemiesUpdate: (enemies: string[]) => void
+}
+
+export function GameCanvas({ onGameOver, onScoreUpdate, onEncounteredEnemiesUpdate }: GameCanvasProps) {
+  const canvasRef = useRef<HTMLCanvasElement>(null)
+  const animationFrameRef = useRef<number>(0)
+  const gameStateRef = useRef<GameState | null>(null)
+  const lastChaserSpawnRef = useRef<number>(0)
+  const lastCircleSpawnRef = useRef<number>(0)
+  const lastStarSpawnRef = useRef<number>(0)
+  // Новые ссылки для спавна
+  const lastTriangleSpawnRef = useRef<number>(0)
+  const lastPentagonSpawnRef = useRef<number>(0)
+  const lastLightningSpawnRef = useRef<number>(0)
+  const lastFireSpawnRef = useRef<number>(0)
+  const lastDiagonalSpawnRef = useRef<number>(0)
+  const lastMineSpawnRef = useRef<number>(0)
+  const lastLaserSpawnRef = useRef<number>(0)
+  const lastTeleportCubeSpawnRef = useRef<number>(0)
+  const lastSpinnerSpawnRef = useRef<number>(0)
+  const lastGhostBallSpawnRef = useRef<number>(0)
+  const lastSnakeSegmentSpawnRef = useRef<number>(0)
+  const [gameConfig, setGameConfig] = useState<GameConfig>(() => ({
+    gameWidth: 1200,
+    gameHeight: 800,
+    playerSize: 12,
+    chaserSize: 20,
+    circleSize: 20,
+    chaserSpeed: 2,
+    circleSpeed: 3,
+    chaserSpawnTime: 10000,
+    circleSpawnTime: 30000,
+    starSpawnTime: 40000,
+    starSize: 24,
+    starShootInterval: 20000, // 20 секунд
+    projectileSize: 8,
+    projectileSpeed: 4,
+    // Новые фигуры
+    triangleSize: 18,
+    triangleSpawnTime: 15000,
+    pentagonSize: 22,
+    pentagonSpawnTime: 25000,
+    lightningSize: 16,
+    lightningSpawnTime: 35000,
+    fireSize: 14,
+    fireSpawnTime: 20000,
+    diagonalSize: 18,
+    diagonalSpawnTime: 60000,
+    mineSize: 12,
+    mineSpawnTime: 55000,
+    laserSpawnTime: 70000,
+    teleportCubeSize: 18,
+    teleportCubeSpawnTime: 80000,
+    // Новые враги
+    spinnerSize: 16,
+    spinnerSpawnTime: 90000,
+    ghostBallSize: 20,
+    ghostBallSpawnTime: 100000,
+    // Параметры нарастающей сложности
+    minSpawnTime: 2000, // Минимальный интервал спавна (2 секунды)
+    difficultyIncreaseRate: 0.95, // Каждые 10 секунд интервалы уменьшаются на 5%
+    difficultyUpdateInterval: 10000, // Обновление сложности каждые 10 секунд
+    // Новые параметры для змейки
+    snakeSegmentSize: 16,
+    snakeSegmentSpawnTime: 110000, // 110 секунд
+    // Параметры для новых фигур
+    pulsatingSphereSize: 20,
+    pulsatingSphereSpawnTime: 45000,
+    patrolSquareSize: 18,
+    patrolSquareSpawnTime: 35000,
+    gravityTrapSize: 25,
+    gravityTrapSpawnTime: 80000,
+    reflectingProjectileSize: 10,
+    reflectingProjectileSpawnTime: 50000,
+  }))
+  
+  const [gameState, setGameState] = useState<GameState>(() => 
+    createInitialGameState(gameConfig)
+  )
+
+  // Обновление размеров при изменении размера окна
+  useEffect(() => {
+    const handleResize = () => {
+      const newWidth = window.innerWidth
+      const newHeight = window.innerHeight
+      
+      setGameConfig(prevConfig => {
+        if (prevConfig.gameWidth !== newWidth || prevConfig.gameHeight !== newHeight) {
+          return {
+            ...prevConfig,
+            gameWidth: newWidth,
+            gameHeight: newHeight
+          }
+        }
+        return prevConfig
+      })
+      
+      if (gameStateRef.current) {
+        gameStateRef.current = {
+          ...gameStateRef.current,
+          gameArea: { width: newWidth, height: newHeight }
+        }
+      }
+    }
+
+    // Only set up the event listener, don't call handleResize immediately
+    window.addEventListener('resize', handleResize)
+
+    return () => {
+      window.removeEventListener('resize', handleResize)
+    }
+  }, []) // Empty dependency array - only run once
+
+  // Separate effect to handle initial sizing
+  useEffect(() => {
+    setGameConfig(prevConfig => ({
+      ...prevConfig,
+      gameWidth: window.innerWidth,
+      gameHeight: window.innerHeight
+    }))
+  }, [])
+
+  // Инициализация игры
+  const startGame = useCallback(() => {
+    const currentConfig = {
+      gameWidth: window.innerWidth,
+      gameHeight: window.innerHeight,
+      playerSize: 12,
+      chaserSize: 20,
+      circleSize: 20,
+      chaserSpeed: 2,
+      circleSpeed: 3,
+      chaserSpawnTime: 10000,
+      circleSpawnTime: 30000,
+      starSpawnTime: 40000,
+      starSize: 24,
+      starShootInterval: 300000,
+      projectileSize: 8,
+      projectileSpeed: 4,
+      // Новые фигуры
+      triangleSize: 18,
+      triangleSpawnTime: 15000,
+      pentagonSize: 22,
+      pentagonSpawnTime: 25000,
+      lightningSize: 16,
+      lightningSpawnTime: 35000,
+      fireSize: 14,
+      fireSpawnTime: 20000,
+      diagonalSize: 18,
+      diagonalSpawnTime: 60000,
+      mineSize: 12,
+      mineSpawnTime: 55000,
+      laserSpawnTime: 70000,
+      teleportCubeSize: 18,
+      teleportCubeSpawnTime: 80000,
+      // Новые враги
+      spinnerSize: 14,
+      spinnerSpawnTime: 65000,
+      ghostBallSize: 18,
+      ghostBallSpawnTime: 70000,
+      // Параметры нарастающей сложности
+      minSpawnTime: 2000,
+      difficultyIncreaseRate: 0.96,
+      difficultyUpdateInterval: 8000,
+      // Новые параметры для змейки
+      snakeSegmentSize: 16,
+      snakeSegmentSpawnTime: 110000, // 110 секунд
+      // Параметры для новых фигур
+      pulsatingSphereSize: 20,
+      pulsatingSphereSpawnTime: 45000,
+      patrolSquareSize: 18,
+      patrolSquareSpawnTime: 35000,
+      gravityTrapSize: 25,
+      gravityTrapSpawnTime: 80000,
+      reflectingProjectileSize: 10,
+      reflectingProjectileSpawnTime: 50000,
+    }
+    
+    const initialState = createInitialGameState(currentConfig)
+    const newState = {
+      ...initialState,
+      isPlaying: true,
+      startTime: Date.now()
+    }
+    setGameState(newState)
+    gameStateRef.current = newState
+    lastChaserSpawnRef.current = Date.now()
+    lastCircleSpawnRef.current = Date.now()
+    lastStarSpawnRef.current = Date.now()
+    // Инициализируем время для новых фигур
+    lastTriangleSpawnRef.current = Date.now()
+    lastPentagonSpawnRef.current = Date.now()
+    lastLightningSpawnRef.current = Date.now()
+    lastFireSpawnRef.current = Date.now()
+    lastDiagonalSpawnRef.current = Date.now()
+    lastMineSpawnRef.current = Date.now()
+    lastLaserSpawnRef.current = Date.now()
+    lastTeleportCubeSpawnRef.current = Date.now()
+    lastSpinnerSpawnRef.current = Date.now()
+    lastGhostBallSpawnRef.current = Date.now()
+    lastSnakeSegmentSpawnRef.current = Date.now()
+  }, [])
+
+  // Остановка игры
+  const stopGame = useCallback(() => {
+    if (animationFrameRef.current) {
+      cancelAnimationFrame(animationFrameRef.current)
+    }
+    setGameState(prev => ({
+      ...prev,
+      isPlaying: false,
+      isGameOver: true
+    }))
+  }, [])
+
+  // Обработка движения мыши
+  const handleMouseMove = useCallback((event: MouseEvent) => {
+    if (!canvasRef.current || !gameStateRef.current?.isPlaying) return
+
+    const canvas = canvasRef.current
+    const rect = canvas.getBoundingClientRect()
+    const scaleX = canvas.width / rect.width
+    const scaleY = canvas.height / rect.height
+    
+    const mouseX = (event.clientX - rect.left) * scaleX
+    const mouseY = (event.clientY - rect.top) * scaleY
+
+    const newState = updatePlayerPosition(gameStateRef.current, { x: mouseX, y: mouseY })
+    gameStateRef.current = newState
+    setGameState(newState)
+  }, [])
+
+  // Обработка касаний для мобильных устройств
+  const handleTouchMove = useCallback((event: TouchEvent) => {
+    if (!canvasRef.current || !gameStateRef.current?.isPlaying) return
+    
+    event.preventDefault()
+    const touch = event.touches[0]
+    if (!touch) return
+
+    const canvas = canvasRef.current
+    const rect = canvas.getBoundingClientRect()
+    const scaleX = canvas.width / rect.width
+    const scaleY = canvas.height / rect.height
+    
+    const touchX = (touch.clientX - rect.left) * scaleX
+    const touchY = (touch.clientY - rect.top) * scaleY
+
+    const newState = updatePlayerPosition(gameStateRef.current, { x: touchX, y: touchY })
+    gameStateRef.current = newState
+    setGameState(newState)
+
+    // Обновляем список встреченных врагов
+    onEncounteredEnemiesUpdate(newState.encounteredEnemies)
+  }, [])
+
+  // Игровой цикл
+  const gameLoop = useCallback(() => {
+    if (!gameStateRef.current?.isPlaying) return
+
+    const currentTime = Date.now()
+    const elapsedTime = currentTime - gameStateRef.current.startTime
+    let newState = { ...gameStateRef.current }
+
+    // Обновляем счет (время в секундах)
+    const newScore = Math.floor(elapsedTime / 1000)
+    newState.score = newScore
+    onScoreUpdate(newScore)
+
+    // Получаем текущие значения конфигурации игры напрямую
+    const baseConfig = {
+      chaserSpawnTime: 6000, // Уменьшили до 6 секунд
+      circleSpawnTime: 20000, // Уменьшили до 20 секунд
+      starSpawnTime: 30000, // Уменьшили до 30 секунд
+      starShootInterval: 15000, // Уменьшили до 15 секунд
+      gameWidth: window.innerWidth,
+      gameHeight: window.innerHeight,
+      playerSize: 10, // Уменьшили размер игрока
+      chaserSize: 22, // Увеличили размер врага
+      circleSize: 22, // Увеличили размер врага
+      chaserSpeed: 2.5, // Увеличили скорость врага
+      circleSpeed: 3.5, // Увеличили скорость врага
+      starSize: 26, // Увеличили размер врага
+      projectileSize: 9, // Увеличили размер снаряда
+      projectileSpeed: 5, // Увеличили скорость снаряда
+      // Новые фигуры
+      triangleSize: 20, // Увеличили размер врага
+      triangleSpawnTime: 10000, // Уменьшили до 10 секунд
+      pentagonSize: 24, // Увеличили размер врага
+      pentagonSpawnTime: 18000, // Уменьшили до 18 секунд
+      lightningSize: 18, // Увеличили размер врага
+      lightningSpawnTime: 22000, // Уменьшили до 22 секунд
+      fireSize: 16, // Увеличили размер врага
+      fireSpawnTime: 1200, // Уменьшили до 12 секунд
+      diagonalSize: 20, // Увеличили размер врага
+      diagonalSpawnTime: 40000, // Уменьшили до 40 секунд
+      mineSize: 14, // Увеличили размер врага
+      mineSpawnTime: 35000, // Уменьшили до 35 секунд
+      laserSpawnTime: 50000, // Уменьшили до 50 секунд
+      teleportCubeSize: 20, // Увеличили размер врага
+      teleportCubeSpawnTime: 6000, // Уменьшили до 60 секунд
+      // Новые враги
+      spinnerSize: 18, // Увеличили размер врага
+      spinnerSpawnTime: 70000, // Уменьшили до 70 секунд
+      ghostBallSize: 22, // Увеличили размер врага
+      ghostBallSpawnTime: 80000, // Уменьшили до 80 секунд
+      // Параметры нарастающей сложности
+      minSpawnTime: 300, // Уменьшили минимальное время до 0.3 секунд
+      difficultyIncreaseRate: 0.85, // Увеличили скорость увеличения сложности (15% уменьшение за интервал)
+      difficultyUpdateInterval: 5000, // Обновление сложности каждые 5 секунд
+      // Новые параметры для змейки
+      snakeSegmentSize: 16,
+      snakeSegmentSpawnTime: 10000, // 110 секунд
+      // Параметры для новых фигур
+      pulsatingSphereSize: 20,
+      pulsatingSphereSpawnTime: 45000, // 45 секунд
+      patrolSquareSize: 18,
+      patrolSquareSpawnTime: 35000, // 35 секунд
+      gravityTrapSize: 25,
+      gravityTrapSpawnTime: 800, // 80 секунд
+      reflectingProjectileSize: 10,
+      reflectingProjectileSpawnTime: 50000, // 50 секунд
+    }
+
+    // Вычисляем текущие интервалы спавна на основе времени игры
+    const currentSpawnIntervals = calculateCurrentSpawnIntervals(baseConfig, elapsedTime)
+    const currentConfig = {
+      ...baseConfig,
+      ...currentSpawnIntervals,
+    }
+
+    // Спавним чейзера через 10 секунд
+    if (elapsedTime >= currentConfig.chaserSpawnTime && 
+        currentTime - lastChaserSpawnRef.current >= currentConfig.chaserSpawnTime) {
+      newState = spawnChaser(newState, currentConfig)
+      lastChaserSpawnRef.current = currentTime
+    }
+
+    // Спавним отскакивающий круг через 30 секунд
+    if (elapsedTime >= currentConfig.circleSpawnTime && 
+        currentTime - lastCircleSpawnRef.current >= currentConfig.circleSpawnTime) {
+      newState = spawnBouncingCircle(newState, currentConfig)
+      lastCircleSpawnRef.current = currentTime
+    }
+
+    // Спавним звездочку через 40 секунд
+    if (elapsedTime >= currentConfig.starSpawnTime && 
+        currentTime - lastStarSpawnRef.current >= currentConfig.starSpawnTime) {
+      newState = spawnStarGenerator(newState, currentConfig)
+      lastStarSpawnRef.current = currentTime
+    }
+
+    // === СПАВН НОВЫХ ФИГУР ===
+    
+    // Спавним треугольник через 15 секунд
+    if (elapsedTime >= currentConfig.triangleSpawnTime && 
+        currentTime - lastTriangleSpawnRef.current >= currentConfig.triangleSpawnTime) {
+      newState = spawnTriangle(newState, currentConfig)
+      lastTriangleSpawnRef.current = currentTime
+    }
+
+    // Спавним пентагон через 25 секунд
+    if (elapsedTime >= currentConfig.pentagonSpawnTime && 
+        currentTime - lastPentagonSpawnRef.current >= currentConfig.pentagonSpawnTime) {
+      newState = spawnPentagon(newState, currentConfig)
+      lastPentagonSpawnRef.current = currentTime
+    }
+
+    // Спавним молнию через 35 секунд
+    if (elapsedTime >= currentConfig.lightningSpawnTime && 
+        currentTime - lastLightningSpawnRef.current >= currentConfig.lightningSpawnTime) {
+      newState = spawnLightning(newState, currentConfig)
+      lastLightningSpawnRef.current = currentTime
+    }
+
+    // Спавним огненные шары каждые 20 секунд
+    if (elapsedTime >= currentConfig.fireSpawnTime && 
+        currentTime - lastFireSpawnRef.current >= currentConfig.fireSpawnTime) {
+      newState = spawnFireBall(newState, currentConfig)
+      lastFireSpawnRef.current = currentTime
+    }
+
+    // Спавним диагонального охотника через 60 секунд
+    if (elapsedTime >= currentConfig.diagonalSpawnTime && 
+        currentTime - lastDiagonalSpawnRef.current >= currentConfig.diagonalSpawnTime) {
+      newState = spawnDiagonalHunter(newState, currentConfig)
+      lastDiagonalSpawnRef.current = currentTime
+    }
+
+    // Спавним лазер через 70 секунд
+    if (elapsedTime >= currentConfig.laserSpawnTime && 
+        currentTime - lastLaserSpawnRef.current >= currentConfig.laserSpawnTime) {
+      newState = spawnLaser(newState, currentConfig)
+      lastLaserSpawnRef.current = currentTime
+    }
+
+    // Спавним телепортирующийся куб через 80 секунд
+    if (elapsedTime >= currentConfig.teleportCubeSpawnTime &&
+        currentTime - lastTeleportCubeSpawnRef.current >= currentConfig.teleportCubeSpawnTime) {
+      newState = spawnTeleportCube(newState, currentConfig)
+      lastTeleportCubeSpawnRef.current = currentTime
+    }
+
+    // Спавним спиннер через 90 секунд
+    if (elapsedTime >= currentConfig.spinnerSpawnTime &&
+        currentTime - lastSpinnerSpawnRef.current >= currentConfig.spinnerSpawnTime) {
+      newState = spawnSpinner(newState, currentConfig)
+      lastSpinnerSpawnRef.current = currentTime
+    }
+
+    // Спавним призрачный шар через 100 секунд
+    if (elapsedTime >= currentConfig.ghostBallSpawnTime &&
+        currentTime - lastGhostBallSpawnRef.current >= currentConfig.ghostBallSpawnTime) {
+      newState = spawnGhostBall(newState, currentConfig)
+      lastGhostBallSpawnRef.current = currentTime
+    }
+
+    // Спавним змейку из 5 сегментов через 110 секунд
+    if (elapsedTime >= currentConfig.snakeSegmentSpawnTime &&
+        currentTime - lastSnakeSegmentSpawnRef.current >= currentConfig.snakeSegmentSpawnTime) {
+      newState = spawnSnake(newState, currentConfig)
+      lastSnakeSegmentSpawnRef.current = currentTime
+    }
+
+
+    // Проверяем, нужно ли стрелять из звездочек
+    const starsToShoot = newState.entities.filter(entity => 
+      entity.type === 'star' && 
+      currentTime - entity.lastShot >= entity.shootInterval
+    )
+
+    starsToShoot.forEach(star => {
+      if (star.type === 'star') {
+        const projectiles = createProjectilesFromStar(star, newState.player.position, currentConfig)
+        newState.entities.push(...projectiles)
+        
+        // Обновляем время последнего выстрела
+        const updatedStar = { ...star, lastShot: currentTime }
+        const starIndex = newState.entities.findIndex(e => e.id === star.id)
+        if (starIndex !== -1) {
+          newState.entities[starIndex] = updatedStar
+        }
+      }
+    })
+
+    // Обновляем позиции объектов
+    newState = updateGameEntities(newState)
+
+    // Проверяем коллизии
+    if (checkGameOver(newState)) {
+      newState.isGameOver = true
+      newState.isPlaying = false
+      gameStateRef.current = newState
+      setGameState(newState)
+      onGameOver(newScore)
+      return
+    }
+
+    gameStateRef.current = newState
+    setGameState(newState)
+
+    // Продолжаем игровой цикл
+    animationFrameRef.current = requestAnimationFrame(gameLoop)
+  }, [onGameOver, onScoreUpdate])
+
+  // Рендеринг игры
+  const render = useCallback(() => {
+    const canvas = canvasRef.current
+    const ctx = canvas?.getContext('2d')
+    if (!canvas || !ctx || !gameStateRef.current) return
+
+    // Очищаем canvas
+    ctx.clearRect(0, 0, canvas.width, canvas.height)
+    
+    const state = gameStateRef.current
+
+    // Рисуем игрока (круг)
+    ctx.fillStyle = state.player.color
+    ctx.beginPath()
+    ctx.arc(
+      state.player.position.x, 
+      state.player.position.y, 
+      state.player.size.width / 2, 
+      0, 
+      2 * Math.PI
+    )
+    ctx.fill()
+
+    // Рисуем игровые объекты
+    state.entities.forEach(entity => {
+      ctx.fillStyle = entity.color
+      
+      if (entity.type === 'bouncing' || entity.type === 'projectile' || 
+          entity.type === 'pentagon' || entity.type === 'lightning' || 
+          entity.type === 'fire') {
+        // Рисуем круг
+        ctx.beginPath()
+        ctx.arc(
+          entity.position.x,
+          entity.position.y,
+          entity.size.width / 2,
+          0,
+          2 * Math.PI
+        )
+        ctx.fill()
+      } else if (entity.type === 'triangle') {
+        // Рисуем вращающийся треугольник
+        const triangleEntity = entity as import('@/types/game').TriangleSpinner
+        const centerX = entity.position.x
+        const centerY = entity.position.y
+        const radius = entity.size.width / 2
+        
+        ctx.save()
+        ctx.translate(centerX, centerY)
+        ctx.rotate(triangleEntity.rotation)
+        
+        ctx.beginPath()
+        for (let i = 0; i < 3; i++) {
+          const angle = (i * 2 * Math.PI) / 3
+          const x = Math.cos(angle) * radius
+          const y = Math.sin(angle) * radius
+          
+          if (i === 0) {
+            ctx.moveTo(x, y)
+          } else {
+            ctx.lineTo(x, y)
+          }
+        }
+        ctx.closePath()
+        ctx.fill()
+        ctx.restore()
+      } else if (entity.type === 'star') {
+        // Рисуем звездочку
+        const centerX = entity.position.x
+        const centerY = entity.position.y
+        const outerRadius = entity.size.width / 2
+        const innerRadius = outerRadius * 0.4
+        const spikes = 5
+        
+        ctx.beginPath()
+        for (let i = 0; i < spikes * 2; i++) {
+          const angle = (i * Math.PI) / spikes
+          const radius = i % 2 === 0 ? outerRadius : innerRadius
+          const x = centerX + Math.cos(angle) * radius
+          const y = centerY + Math.sin(angle) * radius
+          
+          if (i === 0) {
+            ctx.moveTo(x, y)
+          } else {
+            ctx.lineTo(x, y)
+          }
+        }
+        ctx.closePath()
+        ctx.fill()
+      } else if (entity.type === 'laser') {
+        // Рисуем лазерный луч
+        const laserEntity = entity as import('@/types/game').LaserBeam
+        
+        ctx.strokeStyle = entity.color
+        ctx.lineWidth = laserEntity.width
+        ctx.beginPath()
+        
+        const startX = laserEntity.centerX + Math.cos(laserEntity.angle) * 10
+        const startY = laserEntity.centerY + Math.sin(laserEntity.angle) * 10
+        const endX = laserEntity.centerX + Math.cos(laserEntity.angle) * laserEntity.length
+        const endY = laserEntity.centerY + Math.sin(laserEntity.angle) * laserEntity.length
+        
+        ctx.moveTo(startX, startY)
+        ctx.lineTo(endX, endY)
+        ctx.stroke()
+        
+        // Центр лазера
+        ctx.fillStyle = entity.color
+        ctx.beginPath()
+        ctx.arc(laserEntity.centerX, laserEntity.centerY, 5, 0, 2 * Math.PI)
+        ctx.fill()
+      } else if (entity.type === 'mine') {
+        // Рисуем мину
+        const mineEntity = entity as import('@/types/game').Mine
+        
+        // Основная мина
+        ctx.fillStyle = mineEntity.isArmed ? '#dc2626' : '#525252' // Красный если вооружена
+        ctx.fillRect(
+          entity.position.x - entity.size.width / 2,
+          entity.position.y - entity.size.height / 2,
+          entity.size.width,
+          entity.size.height
+        )
+        
+        // Область взрыва (только если вооружена)
+        if (mineEntity.isArmed) {
+          ctx.strokeStyle = '#dc2626'
+          ctx.globalAlpha = 0.3
+          ctx.lineWidth = 1
+          ctx.beginPath()
+          ctx.arc(
+            entity.position.x,
+            entity.position.y,
+            mineEntity.triggerRadius,
+            0,
+            2 * Math.PI
+          )
+          ctx.stroke()
+          ctx.globalAlpha = 1
+        }
+      } else if (entity.type === 'teleport-cube') {
+        // Рисуем телепортирующийся куб
+        const cubeEntity = entity as import('@/types/game').TeleportCube
+
+        ctx.globalAlpha = cubeEntity.fadeOpacity
+        ctx.fillRect(
+          entity.position.x - entity.size.width / 2,
+          entity.position.y - entity.size.height / 2,
+          entity.size.width,
+          entity.size.height
+        )
+        ctx.globalAlpha = 1
+      } else if (entity.type === 'spinner') {
+        // Рисуем спиннер
+        const spinnerEntity = entity as import('@/types/game').Spinner
+        const centerX = entity.position.x
+        const centerY = entity.position.y
+        const radius = entity.size.width / 2
+
+        ctx.save()
+        ctx.translate(centerX, centerY)
+        ctx.rotate(spinnerEntity.angle)
+
+        ctx.beginPath()
+        for (let i = 0; i < 4; i++) {
+          const angle = (i * Math.PI) / 2
+          const x = Math.cos(angle) * radius
+          const y = Math.sin(angle) * radius
+
+          if (i === 0) {
+            ctx.moveTo(x, y)
+          } else {
+            ctx.lineTo(x, y)
+          }
+        }
+        ctx.closePath()
+        ctx.fill()
+        ctx.restore()
+      } else if (entity.type === 'ghost-ball') {
+        // Рисуем призрачный шар
+        const ghostEntity = entity as import('@/types/game').GhostBall
+        
+        ctx.globalAlpha = ghostEntity.opacity
+        ctx.beginPath()
+        ctx.arc(
+          entity.position.x,
+          entity.position.y,
+          entity.size.width / 2,
+          0,
+          2 * Math.PI
+        )
+        ctx.fill()
+        ctx.globalAlpha = 1
+      } else if (entity.type === 'snake-segment') {
+        // Рисуем сегмент змейки
+        const segmentEntity = entity as import('@/types/game').SnakeSegment
+        
+        ctx.fillRect(
+          entity.position.x - entity.size.width / 2,
+          entity.position.y - entity.size.height / 2,
+          entity.size.width,
+          entity.size.height
+        )
+      } else {
+        // Рисуем обычный квадрат
+        ctx.fillRect(
+          entity.position.x - entity.size.width / 2,
+          entity.position.y - entity.size.height / 2,
+          entity.size.width,
+          entity.size.height
+        )
+      }
+    })
+
+    // Планируем следующий кадр рендеринга
+    requestAnimationFrame(render)
+  }, [])
+
+  // Эффект для запуска игры
+  useEffect(() => {
+    startGame()
+  }, [startGame])
+
+  // Эффект для обработчиков событий
+  useEffect(() => {
+    const canvas = canvasRef.current
+    if (!canvas) return
+
+    canvas.addEventListener('mousemove', handleMouseMove)
+    canvas.addEventListener('touchmove', handleTouchMove, { passive: false })
+
+    return () => {
+      canvas.removeEventListener('mousemove', handleMouseMove)
+      canvas.removeEventListener('touchmove', handleTouchMove)
+    }
+  }, [handleMouseMove, handleTouchMove])
+
+  // Эффект для игрового цикла
+  useEffect(() => {
+    if (gameState.isPlaying) {
+      animationFrameRef.current = requestAnimationFrame(gameLoop)
+      requestAnimationFrame(render)
+    }
+
+    return () => {
+      if (animationFrameRef.current) {
+        cancelAnimationFrame(animationFrameRef.current)
+      }
+    }
+  }, [gameState.isPlaying, gameLoop, render])
+
+  return (
+    <div className="fixed inset-0 w-full h-full">
+      <canvas
+        ref={canvasRef}
+        width={window?.innerWidth || 1200}
+        height={window?.innerHeight || 800}
+        className="bg-background cursor-none block"
+        style={{
+          width: '100vw',
+          height: '100vh',
+          objectFit: 'cover'
+        }}
+      />
+    </div>
+  )
+}
