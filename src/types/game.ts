@@ -87,7 +87,7 @@ export interface DiagonalHunter extends GameObject {
 
 // 6. Мина (взрывается при приближении)
 export interface Mine extends GameObject {
-  type: 'mine'
+ type: 'mine'
   explosionRadius: number
   triggerRadius: number
   isArmed: boolean
@@ -109,7 +109,7 @@ export interface LaserBeam extends GameObject {
 export interface TeleportCube extends GameObject {
   type: 'teleport-cube'
   teleportInterval: number
-  lastTeleport: number
+ lastTeleport: number
   fadeOpacity: number
 }
 
@@ -135,8 +135,8 @@ export interface GhostBall extends GameObject {
 // 11. Сегмент змейки (часть составного врага "змейка")
 export interface SnakeSegment extends GameObject {
   type: 'snake-segment'
-  velocity: Position
-  speed: number
+ velocity: Position
+ speed: number
   segmentIndex: number // Позиция сегмента в змейке (0 - голова)
   connectedTo?: string // ID предыдущего сегмента
 }
@@ -170,11 +170,57 @@ export interface ReflectingProjectile extends GameObject {
   maxBounces: number
 }
 
+// 14. Кристаллический контроллер (замораживает других врагов)
+export interface CrystalController extends GameObject {
+  type: 'crystal-controller'
+  lastFreeze: number
+  freezeCooldown: number
+  freezeDuration: number
+  freezeRadius: number
+}
 
-export type GameEntity = Player | ChaserSquare | BouncingCircle | StarGenerator | PurpleProjectile |
-  TriangleSpinner | PentagonSpiral | Lightning | FireBall | DiagonalHunter |
-  Mine | LaserBeam | TeleportCube | Spinner | GhostBall | SnakeSegment |
-  PulsatingSphere | PatrolSquare | ReflectingProjectile
+// 15. Призрачный дубликатор (копирует движения игрока)
+export interface PhantomDuplicator extends GameObject {
+  type: 'phantom-duplicator'
+  targetPosition: Position
+  delay: number
+  lastUpdate: number
+  offset: number
+}
+
+// 16. Зона заражения (оставляет зоны опасности)
+export interface ContaminationZone extends GameObject {
+  type: 'contamination-zone'
+  lastDrop: number
+  dropInterval: number
+  zoneDuration: number
+}
+
+// Интерфейс для временной зоны опасности
+export interface HazardZone extends GameObject {
+  type: 'hazard-zone'
+  expirationTime: number
+}
+
+// Типы бонусов
+export enum BonusType {
+  SHIELD = 'shield',
+  SLOW_ENEMIES = 'slow-enemies',
+  SIZE_UP = 'size-up',
+  INVISIBILITY = 'invisibility',
+  EXTRA_TIME = 'extra-time'
+}
+
+export interface Bonus extends GameObject {
+  type: 'bonus'
+  bonusType: BonusType
+}
+
+export interface ActiveBonus {
+  id: string
+  type: BonusType
+  endTime: number
+}
 
 export interface GameState {
   isPlaying: boolean
@@ -184,8 +230,17 @@ export interface GameState {
   player: Player
   entities: GameEntity[]
   gameArea: Size
-  encounteredEnemies: string[] // Список типов встреченных врагов
+  encounteredEnemies: string[]
+  activeBonuses: ActiveBonus[]
+  killerEnemy?: GameEntity | null
 }
+
+export type GameEntity = Player | ChaserSquare | BouncingCircle | StarGenerator | PurpleProjectile |
+  TriangleSpinner | PentagonSpiral | Lightning | FireBall | DiagonalHunter |
+  Mine | LaserBeam | TeleportCube | Spinner | GhostBall | SnakeSegment |
+  PulsatingSphere | PatrolSquare | ReflectingProjectile | Bonus | CrystalController |
+  PhantomDuplicator | ContaminationZone | HazardZone
+
 
 export interface GameConfig {
   gameWidth: number
@@ -228,12 +283,27 @@ export interface GameConfig {
   // Параметры для новых фигур
   pulsatingSphereSize: number
   pulsatingSphereSpawnTime: number
- patrolSquareSize: number
+  patrolSquareSize: number
   patrolSquareSpawnTime: number
   reflectingProjectileSize: number
   reflectingProjectileSpawnTime: number
   // Параметры нарастающей сложности
   minSpawnTime: number
   difficultyIncreaseRate: number
- difficultyUpdateInterval: number
+  difficultyUpdateInterval: number
+  // Параметры для бонусов
+  bonusSpawnTime: number
+  bonusSize: number
+  shieldDuration: number
+  slowEnemiesDuration: number
+  sizeUpDuration: number
+  invisibilityDuration: number
+  extraTimeAmount: number
+  // Новые параметры для врагов
+  crystalControllerSize: number
+  crystalControllerSpawnTime: number
+  phantomDuplicatorSize: number
+  phantomDuplicatorSpawnTime: number
+  contaminationZoneSize: number
+  contaminationZoneSpawnTime: number
 }

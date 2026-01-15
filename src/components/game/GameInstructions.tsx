@@ -324,10 +324,10 @@ export function GameInstructions({ onClose, encounteredEnemies = [], currentGame
         <div className="p-6 bg-gray-800/40 border-t border-gray-700">
           <div className="text-center">
             <p className="text-sm text-purple-300 mb-2">
-              💡 <strong>Подсказка:</strong> Всего в игре {gameEntities.length - 1} различных фигур
+              💡 <strong>Подсказка:</strong> ✨ Подбирайте светящиеся фигуры (бонусы) для получения преимуществ!
             </p>
             <p className="text-xs text-gray-400">
-              Сложность игры постепенно увеличивается с течением времени!
+              Всего в игре {gameEntities.length - 1} различных фигур. Сложность постепенно увеличивается!
             </p>
           </div>
         </div>

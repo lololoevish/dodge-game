@@ -2,16 +2,20 @@
 
 import { Button } from "@/components/ui/button"
 import { RotateCcw, Home } from "lucide-react"
+import { GameEntity } from "@/types/game"
+import { getEnemyDescription } from "@/lib/enemyDescriptions"
 
 interface GameOverScreenProps {
   score: number
   bestScore: number
   onRestart: () => void
   onMainMenu: () => void
+  killerEnemy: GameEntity | null
 }
 
-export function GameOverScreen({ score, bestScore, onRestart, onMainMenu }: GameOverScreenProps) {
+export function GameOverScreen({ score, bestScore, onRestart, onMainMenu, killerEnemy }: GameOverScreenProps) {
   const isNewRecord = score > bestScore
+  const killerDescription = killerEnemy ? getEnemyDescription(killerEnemy.type) : null;
 
   return (
     <div className="fixed inset-0 bg-background/80 backdrop-blur-sm flex items-center justify-center z-50">
@@ -48,6 +52,13 @@ export function GameOverScreen({ score, bestScore, onRestart, onMainMenu }: Game
               </span>
             </div>
           </div>
+
+          {killerDescription && (
+            <div className="bg-red-900/20 border border-red-500/30 rounded-lg p-4 text-center">
+              <p className="font-semibold text-red-400">Вас победил: {killerDescription.name}</p>
+              <p className="text-xs text-muted-foreground mt-1">{killerDescription.description}</p>
+            </div>
+          )}
 
           {/* Сообщение в зависимости от результата */}
           <div className="text-center text-sm text-muted-foreground space-y-2">

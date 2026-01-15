@@ -17,7 +17,8 @@ import {
   getGamesPlayed
 } from "@/lib/achievementManager"
 import type { Achievement } from "@/types/achievements"
-
+import { GameEntity } from "@/types/game"
+ 
 export default function GamePage() {
   const router = useRouter()
   const [gameState, setGameState] = useState<"playing" | "paused" | "gameOver">("playing")
@@ -29,6 +30,7 @@ export default function GamePage() {
   const [previousEncountered, setPreviousEncountered] = useState<string[]>([])
   const [newAchievements, setNewAchievements] = useState<Achievement[]>([]) // Новые достижения
   const [isFirstGame, setIsFirstGame] = useState(false)
+  const [killerEnemy, setKillerEnemy] = useState<GameEntity | null>(null);
 
   // Загрузка лучшего рекорда при монтировании
   useEffect(() => {
@@ -43,8 +45,9 @@ export default function GamePage() {
   }, [])
 
   // Обработка окончания игры
-  const handleGameOver = useCallback((finalScore: number) => {
+  const handleGameOver = useCallback((finalScore: number, killer: GameEntity | null) => {
     setGameState("gameOver")
+    setKillerEnemy(killer);
     
     // Сохраняем новый рекорд если он лучше
     if (finalScore > bestScore) {
@@ -103,6 +106,7 @@ export default function GamePage() {
     setNewAchievements([])
     setIsFirstGame(false)
     setGameKey(prev => prev + 1) // Принудительно пересоздаем GameCanvas
+    setKillerEnemy(null);
   }, [])
 
   // Возврат в главное меню
@@ -193,6 +197,7 @@ export default function GamePage() {
             bestScore={bestScore}
             onRestart={handleRestart}
             onMainMenu={handleMainMenu}
+            killerEnemy={killerEnemy}
           />
           
           {/* Уведомления о новых достижениях */}

@@ -1,7 +1,21 @@
-"use client"
+"use client";
 
 import { useRef, useEffect, useState, useCallback } from 'react'
 import { GameState, GameConfig, Position } from '@/types/game'
+
+// Функция для безопасного получения размеров окна
+const getWindowDimensions = () => {
+  if (typeof window !== 'undefined') {
+    return {
+      width: window.innerWidth,
+      height: window.innerHeight
+    };
+  }
+  return {
+    width: 1200,
+    height: 800
+  };
+};
 import {
   createInitialGameState,
   updatePlayerPosition,
@@ -22,11 +36,21 @@ import {
   createProjectilesFromStar,
   updateGameEntities,
   checkGameOver,
-  calculateCurrentSpawnIntervals
+  calculateCurrentSpawnIntervals,
+  spawnBonus,
+  applyBonus,
+  updateActiveBonuses,
+  spawnPulsatingSphere,
+  spawnReflectingProjectile,
+  spawnCrystalController,
+  spawnPhantomDuplicator,
+  spawnContaminationZone,
 } from '@/lib/gameLogic'
 
+import { GameEntity } from '@/types/game';
+
 interface GameCanvasProps {
-  onGameOver: (score: number) => void
+  onGameOver: (score: number, killerEnemy: GameEntity | null) => void
   onScoreUpdate: (score: number) => void
   onEncounteredEnemiesUpdate: (enemies: string[]) => void
 }
@@ -50,9 +74,15 @@ export function GameCanvas({ onGameOver, onScoreUpdate, onEncounteredEnemiesUpda
   const lastSpinnerSpawnRef = useRef<number>(0)
   const lastGhostBallSpawnRef = useRef<number>(0)
   const lastSnakeSegmentSpawnRef = useRef<number>(0)
+  const lastBonusSpawnRef = useRef<number>(0)
+  const lastCrystalControllerSpawnRef = useRef<number>(0)
+  const lastPhantomDuplicatorSpawnRef = useRef<number>(0)
+  const lastContaminationZoneSpawnRef = useRef<number>(0)
+  const [windowSize, setWindowSize] = useState(getWindowDimensions());
+
   const [gameConfig, setGameConfig] = useState<GameConfig>(() => ({
-    gameWidth: 1200,
-    gameHeight: 800,
+    gameWidth: getWindowDimensions().width,
+    gameHeight: getWindowDimensions().height,
     playerSize: 12,
     chaserSize: 20,
     circleSize: 20,
@@ -102,6 +132,20 @@ export function GameCanvas({ onGameOver, onScoreUpdate, onEncounteredEnemiesUpda
     gravityTrapSpawnTime: 80000,
     reflectingProjectileSize: 10,
     reflectingProjectileSpawnTime: 50000,
+    // Бонусы
+    bonusSpawnTime: 20000,
+    bonusSize: 15,
+    shieldDuration: 5000,
+    slowEnemiesDuration: 8000,
+    sizeUpDuration: 15000,
+    invisibilityDuration: 7000,
+    extraTimeAmount: 10,
+    crystalControllerSize: 24,
+    crystalControllerSpawnTime: 110000,
+    phantomDuplicatorSize: 18,
+    phantomDuplicatorSpawnTime: 120000,
+    contaminationZoneSize: 30,
+    contaminationZoneSpawnTime: 130000,
   }))
   
   const [gameState, setGameState] = useState<GameState>(() => 
@@ -110,51 +154,48 @@ export function GameCanvas({ onGameOver, onScoreUpdate, onEncounteredEnemiesUpda
 
   // Обновление размеров при изменении размера окна
   useEffect(() => {
-    const handleResize = () => {
-      const newWidth = window.innerWidth
-      const newHeight = window.innerHeight
-      
-      setGameConfig(prevConfig => {
-        if (prevConfig.gameWidth !== newWidth || prevConfig.gameHeight !== newHeight) {
-          return {
-            ...prevConfig,
-            gameWidth: newWidth,
-            gameHeight: newHeight
+    if (typeof window !== 'undefined') {
+      const handleResize = () => {
+        const newDimensions = getWindowDimensions();
+        
+        setGameConfig(prevConfig => {
+          if (prevConfig.gameWidth !== newDimensions.width || prevConfig.gameHeight !== newDimensions.height) {
+            return {
+              ...prevConfig,
+              gameWidth: newDimensions.width,
+              gameHeight: newDimensions.height
+            }
+          }
+          return prevConfig
+        })
+        
+        setWindowSize(newDimensions);
+        
+        if (gameStateRef.current) {
+          gameStateRef.current = {
+            ...gameStateRef.current,
+            gameArea: { width: newDimensions.width, height: newDimensions.height }
           }
         }
-        return prevConfig
-      })
-      
-      if (gameStateRef.current) {
-        gameStateRef.current = {
-          ...gameStateRef.current,
-          gameArea: { width: newWidth, height: newHeight }
-        }
+      }
+
+      // Only set up the event listener, don't call handleResize immediately
+      window.addEventListener('resize', handleResize)
+
+      // Initialize dimensions on mount
+      handleResize()
+
+      return () => {
+        window.removeEventListener('resize', handleResize)
       }
     }
-
-    // Only set up the event listener, don't call handleResize immediately
-    window.addEventListener('resize', handleResize)
-
-    return () => {
-      window.removeEventListener('resize', handleResize)
-    }
   }, []) // Empty dependency array - only run once
-
-  // Separate effect to handle initial sizing
-  useEffect(() => {
-    setGameConfig(prevConfig => ({
-      ...prevConfig,
-      gameWidth: window.innerWidth,
-      gameHeight: window.innerHeight
-    }))
-  }, [])
 
   // Инициализация игры
   const startGame = useCallback(() => {
     const currentConfig = {
-      gameWidth: window.innerWidth,
-      gameHeight: window.innerHeight,
+      gameWidth: getWindowDimensions().width,
+      gameHeight: getWindowDimensions().height,
       playerSize: 12,
       chaserSize: 20,
       circleSize: 20,
@@ -204,9 +245,25 @@ export function GameCanvas({ onGameOver, onScoreUpdate, onEncounteredEnemiesUpda
       gravityTrapSpawnTime: 80000,
       reflectingProjectileSize: 10,
       reflectingProjectileSpawnTime: 50000,
+      bonusSpawnTime: 20000,
+      bonusSize: 15,
+      shieldDuration: 5000,
+      slowEnemiesDuration: 8000,
+      sizeUpDuration: 15000,
+      invisibilityDuration: 7000,
+      extraTimeAmount: 10,
+    }
+    const currentConfigWithNewEnemies = {
+      ...currentConfig,
+      crystalControllerSize: 24,
+      crystalControllerSpawnTime: 110000,
+      phantomDuplicatorSize: 18,
+      phantomDuplicatorSpawnTime: 120000,
+      contaminationZoneSize: 30,
+      contaminationZoneSpawnTime: 130000,
     }
     
-    const initialState = createInitialGameState(currentConfig)
+    const initialState = createInitialGameState(currentConfigWithNewEnemies as GameConfig)
     const newState = {
       ...initialState,
       isPlaying: true,
@@ -229,6 +286,10 @@ export function GameCanvas({ onGameOver, onScoreUpdate, onEncounteredEnemiesUpda
     lastSpinnerSpawnRef.current = Date.now()
     lastGhostBallSpawnRef.current = Date.now()
     lastSnakeSegmentSpawnRef.current = Date.now()
+    lastBonusSpawnRef.current = Date.now()
+    lastCrystalControllerSpawnRef.current = Date.now()
+    lastPhantomDuplicatorSpawnRef.current = Date.now()
+    lastContaminationZoneSpawnRef.current = Date.now()
   }, [])
 
   // Остановка игры
@@ -303,8 +364,8 @@ export function GameCanvas({ onGameOver, onScoreUpdate, onEncounteredEnemiesUpda
       circleSpawnTime: 20000, // Уменьшили до 20 секунд
       starSpawnTime: 30000, // Уменьшили до 30 секунд
       starShootInterval: 15000, // Уменьшили до 15 секунд
-      gameWidth: window.innerWidth,
-      gameHeight: window.innerHeight,
+      gameWidth: getWindowDimensions().width,
+      gameHeight: getWindowDimensions().height,
       playerSize: 10, // Уменьшили размер игрока
       chaserSize: 22, // Увеличили размер врага
       circleSize: 22, // Увеличили размер врага
@@ -350,14 +411,33 @@ export function GameCanvas({ onGameOver, onScoreUpdate, onEncounteredEnemiesUpda
       gravityTrapSpawnTime: 800, // 80 секунд
       reflectingProjectileSize: 10,
       reflectingProjectileSpawnTime: 50000, // 50 секунд
+      bonusSpawnTime: 20000,
+      bonusSize: 15,
+      shieldDuration: 5000,
+      slowEnemiesDuration: 8000,
+      sizeUpDuration: 15000,
+      invisibilityDuration: 7000,
+      extraTimeAmount: 10,
+    }
+    const currentConfigWithNewEnemies = {
+      ...baseConfig,
+      crystalControllerSize: 24,
+      crystalControllerSpawnTime: 110000,
+      phantomDuplicatorSize: 18,
+      phantomDuplicatorSpawnTime: 120000,
+      contaminationZoneSize: 30,
+      contaminationZoneSpawnTime: 130000,
     }
 
     // Вычисляем текущие интервалы спавна на основе времени игры
-    const currentSpawnIntervals = calculateCurrentSpawnIntervals(baseConfig, elapsedTime)
+    const currentSpawnIntervals = calculateCurrentSpawnIntervals(currentConfigWithNewEnemies as GameConfig, elapsedTime)
     const currentConfig = {
       ...baseConfig,
       ...currentSpawnIntervals,
-    }
+      crystalControllerSize: 24,
+      phantomDuplicatorSize: 18,
+      contaminationZoneSize: 30,
+    } as GameConfig
 
     // Спавним чейзера через 10 секунд
     if (elapsedTime >= currentConfig.chaserSpawnTime && 
@@ -452,6 +532,31 @@ export function GameCanvas({ onGameOver, onScoreUpdate, onEncounteredEnemiesUpda
       lastSnakeSegmentSpawnRef.current = currentTime
     }
 
+    // Спавним бонусы
+    if (currentTime - lastBonusSpawnRef.current >= currentConfig.bonusSpawnTime) {
+        newState = spawnBonus(newState, currentConfig);
+        lastBonusSpawnRef.current = currentTime;
+    }
+
+    // Спавним новых врагов
+    if (elapsedTime >= currentConfig.crystalControllerSpawnTime &&
+        currentTime - lastCrystalControllerSpawnRef.current >= currentConfig.crystalControllerSpawnTime) {
+      newState = spawnCrystalController(newState, currentConfig)
+      lastCrystalControllerSpawnRef.current = currentTime
+    }
+
+    if (elapsedTime >= currentConfig.phantomDuplicatorSpawnTime &&
+        currentTime - lastPhantomDuplicatorSpawnRef.current >= currentConfig.phantomDuplicatorSpawnTime) {
+      newState = spawnPhantomDuplicator(newState, currentConfig)
+      lastPhantomDuplicatorSpawnRef.current = currentTime
+    }
+
+    if (elapsedTime >= currentConfig.contaminationZoneSpawnTime &&
+        currentTime - lastContaminationZoneSpawnRef.current >= currentConfig.contaminationZoneSpawnTime) {
+      newState = spawnContaminationZone(newState, currentConfig)
+      lastContaminationZoneSpawnRef.current = currentTime
+    }
+
 
     // Проверяем, нужно ли стрелять из звездочек
     const starsToShoot = newState.entities.filter(entity => 
@@ -474,15 +579,17 @@ export function GameCanvas({ onGameOver, onScoreUpdate, onEncounteredEnemiesUpda
     })
 
     // Обновляем позиции объектов
-    newState = updateGameEntities(newState)
+    newState = updateGameEntities(newState, currentConfig)
 
     // Проверяем коллизии
-    if (checkGameOver(newState)) {
+    const killerEnemy = checkGameOver(newState);
+    if (killerEnemy) {
       newState.isGameOver = true
       newState.isPlaying = false
+      newState.killerEnemy = killerEnemy;
       gameStateRef.current = newState
       setGameState(newState)
-      onGameOver(newScore)
+      onGameOver(newScore, killerEnemy)
       return
     }
 
@@ -705,6 +812,110 @@ export function GameCanvas({ onGameOver, onScoreUpdate, onEncounteredEnemiesUpda
           entity.size.height
         )
       }
+      if (entity.type === 'bonus') {
+        // Рисуем бонус с эффектом свечения
+        const bonusEntity = entity as import('@/types/game').Bonus
+        const currentTime = Date.now();
+        const glowAlpha = 0.6 + 0.4 * Math.sin(currentTime / 300); // Пульсация от 0.6 до 1.0
+        const glowRadius = entity.size.width / 2 + 5 + 3 * Math.sin(currentTime / 300); // Пульсирующий радиус
+
+        // Рисуем свечение
+        ctx.save();
+        ctx.globalAlpha = glowAlpha;
+        ctx.beginPath();
+        ctx.arc(entity.position.x, entity.position.y, glowRadius, 0, 2 * Math.PI);
+        ctx.fillStyle = bonusEntity.color;
+        ctx.shadowColor = bonusEntity.color;
+        ctx.shadowBlur = 15;
+        ctx.fill();
+        ctx.restore();
+
+        // Рисуем сам бонус
+        ctx.fillStyle = bonusEntity.color;
+        ctx.beginPath();
+        ctx.arc(
+          entity.position.x,
+          entity.position.y,
+          entity.size.width / 2,
+          0,
+          2 * Math.PI
+        );
+        ctx.fill();
+
+        // Рисуем букву
+        ctx.fillStyle = 'white';
+        ctx.font = 'bold 12px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(bonusEntity.bonusType.charAt(0).toUpperCase(), entity.position.x, entity.position.y);
+      } else if (entity.type === 'crystal-controller') {
+        // Рисуем кристаллический контроллер
+        const crystalEntity = entity as import('@/types/game').CrystalController;
+        const centerX = entity.position.x;
+        const centerY = entity.position.y;
+        const radius = entity.size.width / 2;
+        
+        ctx.save();
+        ctx.translate(centerX, centerY);
+        ctx.beginPath();
+        for (let i = 0; i < 6; i++) {
+          const angle = (i * Math.PI) / 3;
+          const x = Math.cos(angle) * radius;
+          const y = Math.sin(angle) * radius;
+          if (i === 0) {
+            ctx.moveTo(x, y);
+          } else {
+            ctx.lineTo(x, y);
+          }
+        }
+        ctx.closePath();
+        ctx.fillStyle = entity.color;
+        ctx.fill();
+        ctx.restore();
+      } else if (entity.type === 'phantom-duplicator') {
+        // Рисуем призрачного дубликатора
+        ctx.globalAlpha = 0.6;
+        ctx.fillStyle = entity.color;
+        ctx.beginPath();
+        ctx.arc(
+          entity.position.x,
+          entity.position.y,
+          entity.size.width / 2,
+          0,
+          2 * Math.PI
+        );
+        ctx.fill();
+        ctx.globalAlpha = 1;
+      } else if (entity.type === 'contamination-zone') {
+        // Рисуем зону заражения
+        ctx.fillStyle = entity.color;
+        ctx.beginPath();
+        ctx.arc(
+          entity.position.x,
+          entity.position.y,
+          entity.size.width / 2,
+          0,
+          2 * Math.PI
+        );
+        ctx.fill();
+        // Рисуем символ радиации
+        ctx.fillStyle = 'black';
+        ctx.font = 'bold 16px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('☢️', entity.position.x, entity.position.y);
+      } else if (entity.type === 'hazard-zone') {
+        // Рисуем зону опасности
+        ctx.globalAlpha = 0.3;
+        ctx.fillStyle = entity.color;
+        ctx.fillRect(
+          entity.position.x - entity.size.width / 2,
+          entity.position.y - entity.size.height / 2,
+          entity.size.width,
+          entity.size.height
+        );
+        ctx.globalAlpha = 1;
+      }
     })
 
     // Планируем следующий кадр рендеринга
@@ -748,8 +959,8 @@ export function GameCanvas({ onGameOver, onScoreUpdate, onEncounteredEnemiesUpda
     <div className="fixed inset-0 w-full h-full">
       <canvas
         ref={canvasRef}
-        width={window?.innerWidth || 1200}
-        height={window?.innerHeight || 800}
+        width={windowSize.width}
+        height={windowSize.height}
         className="bg-background cursor-none block"
         style={{
           width: '100vw',
