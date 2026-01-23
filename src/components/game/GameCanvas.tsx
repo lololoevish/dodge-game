@@ -54,9 +54,10 @@ interface GameCanvasProps {
   onGameOver: (score: number, killerEnemy: GameEntity | null) => void
   onScoreUpdate: (score: number) => void
   onEncounteredEnemiesUpdate: (enemies: string[]) => void
+  className?: string
 }
 
-export function GameCanvas({ gameState, onGameOver, onScoreUpdate, onEncounteredEnemiesUpdate }: GameCanvasProps) {
+export function GameCanvas({ gameState, onGameOver, onScoreUpdate, onEncounteredEnemiesUpdate, className }: GameCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const animationFrameRef = useRef<number>(0)
   const gameStateRef = useRef<GameState | null>(null)
@@ -957,12 +958,12 @@ export function GameCanvas({ gameState, onGameOver, onScoreUpdate, onEncountered
   }, [gameState.isPlaying, gameLoop, render])
 
   return (
-    <div className="fixed inset-0 w-full h-full">
+    <div className={`fixed inset-0 w-full h-full ${className || ''}`}>
       <canvas
         ref={canvasRef}
         width={windowSize.width}
         height={windowSize.height}
-        className="bg-background cursor-none block"
+        className="bg-background cursor-none block w-full h-full"
         style={{
           width: '100vw',
           height: '100vh',

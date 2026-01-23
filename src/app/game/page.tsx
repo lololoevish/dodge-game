@@ -253,6 +253,7 @@ export default function GamePage() {
             onGameOver={handleGameOver}
             onScoreUpdate={handleScoreUpdate}
             onEncounteredEnemiesUpdate={handleEncounteredEnemiesUpdate}
+            className="absolute inset-0 w-full h-full"
           />
 
           {/* Мобильная панель внизу - только для мобильного режима */}
