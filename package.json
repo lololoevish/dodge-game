@@ -5,7 +5,9 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "start": "serve out"
+    "start": "serve out",
+    "build:github": "GITHUB_PAGES=true next build",
+    "export": "next build && next export"
   },
   "dependencies": {
     "@radix-ui/react-slot": "^1.2.4",
