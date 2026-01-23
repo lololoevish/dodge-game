@@ -50,12 +50,13 @@ import {
 import { GameEntity } from '@/types/game';
 
 interface GameCanvasProps {
+  gameState: "playing" | "paused" | "gameOver"
   onGameOver: (score: number, killerEnemy: GameEntity | null) => void
   onScoreUpdate: (score: number) => void
   onEncounteredEnemiesUpdate: (enemies: string[]) => void
 }
 
-export function GameCanvas({ onGameOver, onScoreUpdate, onEncounteredEnemiesUpdate }: GameCanvasProps) {
+export function GameCanvas({ gameState, onGameOver, onScoreUpdate, onEncounteredEnemiesUpdate }: GameCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const animationFrameRef = useRef<number>(0)
   const gameStateRef = useRef<GameState | null>(null)
@@ -148,7 +149,7 @@ export function GameCanvas({ onGameOver, onScoreUpdate, onEncounteredEnemiesUpda
     contaminationZoneSpawnTime: 130000,
   }))
   
-  const [gameState, setGameState] = useState<GameState>(() => 
+  const [localGameState, setLocalGameState] = useState<GameState>(() => 
     createInitialGameState(gameConfig)
   )
 
@@ -269,7 +270,7 @@ export function GameCanvas({ onGameOver, onScoreUpdate, onEncounteredEnemiesUpda
       isPlaying: true,
       startTime: Date.now()
     }
-    setGameState(newState)
+    setLocalGameState(newState)
     gameStateRef.current = newState
     lastChaserSpawnRef.current = Date.now()
     lastCircleSpawnRef.current = Date.now()
@@ -297,7 +298,7 @@ export function GameCanvas({ onGameOver, onScoreUpdate, onEncounteredEnemiesUpda
     if (animationFrameRef.current) {
       cancelAnimationFrame(animationFrameRef.current)
     }
-    setGameState(prev => ({
+    setLocalGameState(prev => ({
       ...prev,
       isPlaying: false,
       isGameOver: true
@@ -318,7 +319,7 @@ export function GameCanvas({ onGameOver, onScoreUpdate, onEncounteredEnemiesUpda
 
     const newState = updatePlayerPosition(gameStateRef.current, { x: mouseX, y: mouseY })
     gameStateRef.current = newState
-    setGameState(newState)
+    setLocalGameState(newState)
   }, [])
 
   // Обработка касаний для мобильных устройств
@@ -339,7 +340,7 @@ export function GameCanvas({ onGameOver, onScoreUpdate, onEncounteredEnemiesUpda
 
     const newState = updatePlayerPosition(gameStateRef.current, { x: touchX, y: touchY })
     gameStateRef.current = newState
-    setGameState(newState)
+    setLocalGameState(newState)
 
     // Обновляем список встреченных врагов
     onEncounteredEnemiesUpdate(newState.encounteredEnemies)
@@ -347,7 +348,7 @@ export function GameCanvas({ onGameOver, onScoreUpdate, onEncounteredEnemiesUpda
 
   // Игровой цикл
   const gameLoop = useCallback(() => {
-    if (!gameStateRef.current?.isPlaying) return
+    if (!gameStateRef.current?.isPlaying || gameState === "paused") return
 
     const currentTime = Date.now()
     const elapsedTime = currentTime - gameStateRef.current.startTime
@@ -588,17 +589,17 @@ export function GameCanvas({ onGameOver, onScoreUpdate, onEncounteredEnemiesUpda
       newState.isPlaying = false
       newState.killerEnemy = killerEnemy;
       gameStateRef.current = newState
-      setGameState(newState)
+      setLocalGameState(newState)
       onGameOver(newScore, killerEnemy)
       return
     }
 
     gameStateRef.current = newState
-    setGameState(newState)
+    setLocalGameState(newState)
 
     // Продолжаем игровой цикл
     animationFrameRef.current = requestAnimationFrame(gameLoop)
-  }, [onGameOver, onScoreUpdate])
+  }, [gameState, onGameOver, onScoreUpdate, onEncounteredEnemiesUpdate])
 
   // Рендеринг игры
   const render = useCallback(() => {

@@ -44,7 +44,23 @@ export default function GamePage() {
     setIsFirstGame(gamesPlayed === 0)
   }, [])
 
-  // Обработка окончания игры
+  // Переключение паузы
+  const handleTogglePause = useCallback(() => {
+    setGameState(prev => prev === "playing" ? "paused" : "playing")
+  }, [])
+
+  // Обработка нажатия клавиш для паузы
+  useEffect(() => {
+    const handleKeyPress = (event: KeyboardEvent) => {
+      if (event.code === 'Space' && gameState !== "gameOver") {
+        event.preventDefault()
+        handleTogglePause()
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyPress)
+    return () => window.removeEventListener('keydown', handleKeyPress)
+  }, [gameState, handleTogglePause])
   const handleGameOver = useCallback((finalScore: number, killer: GameEntity | null) => {
     setGameState("gameOver")
     setKillerEnemy(killer);
@@ -139,6 +155,25 @@ export default function GamePage() {
         </Button>
         
         <div className="flex items-center gap-4">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handleTogglePause}
+            className="flex items-center gap-2"
+            disabled={gameState === "gameOver"}
+          >
+            {gameState === "paused" ? (
+              <>
+                <Play className="h-4 w-4" />
+                Продолжить
+              </>
+            ) : (
+              <>
+                <Pause className="h-4 w-4" />
+                Пауза
+              </>
+            )}
+          </Button>
           <div className="text-lg font-bold">
             Время: {formatTime(score)}
           </div>
@@ -150,8 +185,32 @@ export default function GamePage() {
       </div>
 
       {/* Игровая область - полноэкранная */}
-      {gameState === "playing" && (
+      {(gameState === "playing" || gameState === "paused") && (
         <>
+          {/* Экран паузы */}
+          {gameState === "paused" && (
+            <div className="absolute inset-0 z-30 bg-background/80 backdrop-blur-sm flex items-center justify-center">
+              <div className="text-center space-y-6 bg-card border border-border rounded-lg p-8 shadow-2xl">
+                <div className="text-6xl">⏸️</div>
+                <h2 className="text-3xl font-bold">Игра на паузе</h2>
+                <div className="space-y-2 text-muted-foreground">
+                  <p>Нажмите <kbd className="px-2 py-1 bg-muted rounded text-xs">Пробел</kbd> или кнопку "Продолжить"</p>
+                  <p>чтобы возобновить игру</p>
+                </div>
+                <div className="flex gap-4 justify-center">
+                  <Button onClick={handleTogglePause} className="flex items-center gap-2">
+                    <Play className="h-4 w-4" />
+                    Продолжить
+                  </Button>
+                  <Button variant="outline" onClick={handleMainMenu}>
+                    <ArrowLeft className="h-4 w-4 mr-2" />
+                    Главное меню
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
+          
           {/* Инструкции - плавающие поверх игры */}
           <div className="absolute top-20 left-1/2 transform -translate-x-1/2 z-10 text-center space-y-2 bg-background/60 backdrop-blur-sm rounded-lg p-4 max-w-md">
             <p className="text-sm text-muted-foreground">
@@ -163,8 +222,8 @@ export default function GamePage() {
             <p className="text-xs text-amber-500 font-medium">
               🕰️ Новые фигуры появляются каждые 5-10 секунд
             </p>
-            <p className="text-xs text-amber-500 font-medium">
-              🕰️ Новые фигуры появляются каждые 5-10 секунд
+            <p className="text-xs text-blue-500 font-medium">
+              ⏸️ Нажмите <kbd className="px-1 bg-muted rounded text-xs">Пробел</kbd> для паузы
             </p>
           </div>
           
@@ -182,6 +241,7 @@ export default function GamePage() {
           
           <GameCanvas
             key={gameKey}
+            gameState={gameState}
             onGameOver={handleGameOver}
             onScoreUpdate={handleScoreUpdate}
             onEncounteredEnemiesUpdate={handleEncounteredEnemiesUpdate}
