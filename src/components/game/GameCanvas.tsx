@@ -613,16 +613,15 @@ export function GameCanvas({ gameState, onGameOver, onScoreUpdate, onEncountered
     const ctx = canvas?.getContext('2d')
     if (!canvas || !ctx || !gameStateRef.current) return
 
-    // Очищаем canvas темным фоном
-    ctx.fillStyle = '#0f172a' // Темно-серый фон для игрового поля
-    ctx.fillRect(0, 0, canvas.width, canvas.height)
+    // Очищаем canvas
+    ctx.clearRect(0, 0, canvas.width, canvas.height)
     
     const state = gameStateRef.current
 
-    // Рисуем игрока (круг) - делаем его более заметным
-    ctx.fillStyle = '#3b82f6' // Синий цвет
-    ctx.strokeStyle = '#ffffff' // Белая обводка
-    ctx.lineWidth = 2
+    // Рисуем игрока (круг) - ярко-синий для видимости на любом фоне
+    ctx.fillStyle = '#1d4ed8' // Ярко-синий цвет
+    ctx.strokeStyle = '#000000' // Черная обводка для контраста
+    ctx.lineWidth = 3
     ctx.beginPath()
     ctx.arc(
       state.player.position.x, 
@@ -972,7 +971,7 @@ export function GameCanvas({ gameState, onGameOver, onScoreUpdate, onEncountered
         ref={canvasRef}
         width={windowSize.width}
         height={windowSize.height}
-        className="bg-slate-900 dark:bg-background cursor-none block w-full h-full"
+        className="bg-white dark:bg-background cursor-none block w-full h-full"
         style={{
           width: '100vw',
           height: '100vh',
