@@ -618,8 +618,13 @@ export function GameCanvas({ gameState, onGameOver, onScoreUpdate, onEncountered
     
     const state = gameStateRef.current
 
-    // Рисуем игрока (круг) - фиолетовый цвет без обводки
+    // Определяем тему (проверяем класс dark на html элементе)
+    const isDarkTheme = document.documentElement.classList.contains('dark')
+    
+    // Рисуем игрока (круг) - фиолетовый цвет с адаптивной обводкой
     ctx.fillStyle = '#391CFF' // Фиолетовый цвет
+    ctx.strokeStyle = isDarkTheme ? '#ffffff' : '#000000' // Белая обводка в темной теме, черная в светлой
+    ctx.lineWidth = 2
     ctx.beginPath()
     ctx.arc(
       state.player.position.x, 
@@ -629,6 +634,7 @@ export function GameCanvas({ gameState, onGameOver, onScoreUpdate, onEncountered
       2 * Math.PI
     )
     ctx.fill()
+    ctx.stroke()
 
     // Рисуем игровые объекты
     state.entities.forEach(entity => {
