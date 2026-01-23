@@ -349,7 +349,8 @@ export function GameCanvas({ gameState, onGameOver, onScoreUpdate, onEncountered
 
   // Игровой цикл
   const gameLoop = useCallback(() => {
-    if (!gameStateRef.current?.isPlaying || gameState === "paused") return
+    if (!gameStateRef.current?.isPlaying) return
+    if (gameState === "paused") return
 
     const currentTime = Date.now()
     const elapsedTime = currentTime - gameStateRef.current.startTime
@@ -613,8 +614,10 @@ export function GameCanvas({ gameState, onGameOver, onScoreUpdate, onEncountered
     
     const state = gameStateRef.current
 
-    // Рисуем игрока (круг)
-    ctx.fillStyle = state.player.color
+    // Рисуем игрока (круг) - делаем его более заметным
+    ctx.fillStyle = '#3b82f6' // Синий цвет
+    ctx.strokeStyle = '#ffffff' // Белая обводка
+    ctx.lineWidth = 2
     ctx.beginPath()
     ctx.arc(
       state.player.position.x, 
@@ -624,6 +627,7 @@ export function GameCanvas({ gameState, onGameOver, onScoreUpdate, onEncountered
       2 * Math.PI
     )
     ctx.fill()
+    ctx.stroke()
 
     // Рисуем игровые объекты
     state.entities.forEach(entity => {
@@ -945,7 +949,7 @@ export function GameCanvas({ gameState, onGameOver, onScoreUpdate, onEncountered
 
   // Эффект для игрового цикла
   useEffect(() => {
-    if (gameState.isPlaying) {
+    if (gameStateRef.current?.isPlaying && gameState === "playing") {
       animationFrameRef.current = requestAnimationFrame(gameLoop)
       requestAnimationFrame(render)
     }
@@ -955,7 +959,7 @@ export function GameCanvas({ gameState, onGameOver, onScoreUpdate, onEncountered
         cancelAnimationFrame(animationFrameRef.current)
       }
     }
-  }, [gameState.isPlaying, gameLoop, render])
+  }, [gameState, gameLoop, render])
 
   return (
     <div className={`fixed inset-0 w-full h-full ${className || ''}`}>
