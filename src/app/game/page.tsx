@@ -248,11 +248,13 @@ export default function GamePage() {
             </div>
           )}
           
-          {/* Уведомления о новых врагах */}
-          <EnemyNotificationsContainer
-            newEnemies={newEnemies}
-            onDismiss={handleDismissNotification}
-          />
+          {/* Уведомления о новых врагах - только для десктопа */}
+          {platformMode === 'desktop' && (
+            <EnemyNotificationsContainer
+              newEnemies={newEnemies}
+              onDismiss={handleDismissNotification}
+            />
+          )}
           
           <GameCanvas
             key={gameKey}
