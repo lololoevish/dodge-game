@@ -83,12 +83,33 @@ export function checkEnemyAchievements(encounteredEnemies: string[]): Achievemen
   const enemyCount = encounteredEnemies.length
   
   achievements.forEach(achievement => {
-    if (achievement.type === 'enemy' && 
-        !achievement.unlocked && 
-        enemyCount >= achievement.requirement) {
-      achievement.unlocked = true
-      achievement.unlockedAt = Date.now()
-      newlyUnlocked.push(achievement)
+    if (achievement.type === 'enemy' && !achievement.unlocked) {
+      let shouldUnlock = false
+      
+      // Проверяем достижения по количеству врагов
+      if (achievement.id.startsWith('enemy_') && 
+          !achievement.id.includes('chaser') && 
+          !achievement.id.includes('bouncing') && 
+          !achievement.id.includes('star')) {
+        shouldUnlock = enemyCount >= achievement.requirement
+      }
+      
+      // Проверяем достижения за конкретных врагов
+      if (achievement.id === 'enemy_chaser' && encounteredEnemies.includes('chaser')) {
+        shouldUnlock = true
+      }
+      if (achievement.id === 'enemy_bouncing' && encounteredEnemies.includes('bouncing')) {
+        shouldUnlock = true
+      }
+      if (achievement.id === 'enemy_star' && encounteredEnemies.includes('star')) {
+        shouldUnlock = true
+      }
+      
+      if (shouldUnlock) {
+        achievement.unlocked = true
+        achievement.unlockedAt = Date.now()
+        newlyUnlocked.push(achievement)
+      }
     }
   })
   
