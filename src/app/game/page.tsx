@@ -6,6 +6,7 @@ import { ThemeToggle } from "@/components/theme-toggle"
 import { GameCanvas } from "@/components/game/GameCanvas"
 import { GameOverScreen } from "@/components/game/GameOverScreen"
 import { EnemyNotificationsContainer } from "@/components/game/EnemyNotification"
+import { ActiveBoosts } from "@/components/game/ActiveBoosts"
 import { ArrowLeft, Pause, Play } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { 
@@ -16,7 +17,7 @@ import {
   getGamesPlayed
 } from "@/lib/achievementManager"
 import type { Achievement } from "@/types/achievements"
-import { GameEntity } from "@/types/game"
+import { GameEntity, ActiveBonus } from "@/types/game"
  
 export default function GamePage() {
   const router = useRouter()
@@ -30,6 +31,7 @@ export default function GamePage() {
   const [newAchievements, setNewAchievements] = useState<Achievement[]>([]) // Новые достижения
   const [isFirstGame, setIsFirstGame] = useState(false)
   const [killerEnemy, setKillerEnemy] = useState<GameEntity | null>(null);
+  const [activeBonuses, setActiveBonuses] = useState<ActiveBonus[]>([]) // Активные бонусы
 
   // Получение платформы из URL или localStorage
   const [platformMode, setPlatformMode] = useState<'desktop' | 'mobile'>('desktop')
@@ -133,6 +135,10 @@ export default function GamePage() {
     }
   }, [previousEncountered])
 
+  // Обновление активных бонусов
+  const handleActiveBonusesUpdate = useCallback((bonuses: ActiveBonus[]) => {
+    setActiveBonuses(bonuses)
+  }, [])
   // Удаление уведомления о враге
   const handleDismissNotification = useCallback((enemyType: string) => {
     setNewEnemies(prev => prev.filter(e => e !== enemyType))
@@ -146,6 +152,7 @@ export default function GamePage() {
     setNewEnemies([])
     setPreviousEncountered([])
     setNewAchievements([])
+    setActiveBonuses([]) // Очищаем активные бонусы
     setIsFirstGame(false)
     setGameKey(prev => prev + 1) // Принудительно пересоздаем GameCanvas
     setKillerEnemy(null);
@@ -253,7 +260,14 @@ export default function GamePage() {
             onGameOver={handleGameOver}
             onScoreUpdate={handleScoreUpdate}
             onEncounteredEnemiesUpdate={handleEncounteredEnemiesUpdate}
+            onActiveBonusesUpdate={handleActiveBonusesUpdate}
             className="absolute inset-0 w-full h-full"
+          />
+
+          {/* Индикатор активных бустов */}
+          <ActiveBoosts 
+            activeBonuses={activeBonuses} 
+            isMobile={platformMode === 'mobile'} 
           />
 
           {/* Мобильная панель внизу - только для мобильного режима */}

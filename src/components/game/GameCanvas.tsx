@@ -54,10 +54,11 @@ interface GameCanvasProps {
   onGameOver: (score: number, killerEnemy: GameEntity | null) => void
   onScoreUpdate: (score: number) => void
   onEncounteredEnemiesUpdate: (enemies: string[]) => void
+  onActiveBonusesUpdate: (bonuses: ActiveBonus[]) => void
   className?: string
 }
 
-export function GameCanvas({ gameState, onGameOver, onScoreUpdate, onEncounteredEnemiesUpdate, className }: GameCanvasProps) {
+export function GameCanvas({ gameState, onGameOver, onScoreUpdate, onEncounteredEnemiesUpdate, onActiveBonusesUpdate, className }: GameCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const animationFrameRef = useRef<number>(0)
   const gameStateRef = useRef<GameState | null>(null)
@@ -599,9 +600,12 @@ export function GameCanvas({ gameState, onGameOver, onScoreUpdate, onEncountered
     gameStateRef.current = newState
     setLocalGameState(newState)
 
+    // Обновляем активные бонусы
+    onActiveBonusesUpdate(newState.activeBonuses)
+
     // Продолжаем игровой цикл
     animationFrameRef.current = requestAnimationFrame(gameLoop)
-  }, [gameState, onGameOver, onScoreUpdate, onEncounteredEnemiesUpdate])
+  }, [gameState, onGameOver, onScoreUpdate, onEncounteredEnemiesUpdate, onActiveBonusesUpdate])
 
   // Рендеринг игры
   const render = useCallback(() => {
