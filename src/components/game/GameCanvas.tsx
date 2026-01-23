@@ -618,10 +618,8 @@ export function GameCanvas({ gameState, onGameOver, onScoreUpdate, onEncountered
     
     const state = gameStateRef.current
 
-    // Рисуем игрока (круг) - ярко-синий для видимости на любом фоне
-    ctx.fillStyle = '#1d4ed8' // Ярко-синий цвет
-    ctx.strokeStyle = '#000000' // Черная обводка для контраста
-    ctx.lineWidth = 3
+    // Рисуем игрока (круг) - фиолетовый цвет без обводки
+    ctx.fillStyle = '#391CFF' // Фиолетовый цвет
     ctx.beginPath()
     ctx.arc(
       state.player.position.x, 
@@ -631,7 +629,6 @@ export function GameCanvas({ gameState, onGameOver, onScoreUpdate, onEncountered
       2 * Math.PI
     )
     ctx.fill()
-    ctx.stroke()
 
     // Рисуем игровые объекты
     state.entities.forEach(entity => {
