@@ -31,18 +31,34 @@ export default function GamePage() {
   const [isFirstGame, setIsFirstGame] = useState(false)
   const [killerEnemy, setKillerEnemy] = useState<GameEntity | null>(null);
 
-  // Определение мобильного устройства
+  // Получение платформы из URL или localStorage
+  const [platformMode, setPlatformMode] = useState<'desktop' | 'mobile'>('desktop')
+
+  useEffect(() => {
+    // Получаем платформу из URL параметров или localStorage
+    const urlParams = new URLSearchParams(window.location.search)
+    const urlPlatform = urlParams.get('platform') as 'desktop' | 'mobile' | null
+    const storedPlatform = localStorage.getItem("dodgeGame-platform") as 'desktop' | 'mobile' | null
+    
+    const platform = urlPlatform || storedPlatform || 'desktop'
+    setPlatformMode(platform)
+    
+    // Сохраняем в localStorage если получили из URL
+    if (urlPlatform) {
+      localStorage.setItem("dodgeGame-platform", urlPlatform)
+    }
+  }, [])
+
+  // Определение мобильного устройства (только для мобильного режима)
   const [isMobile, setIsMobile] = useState(false)
 
   useEffect(() => {
-    const checkMobile = () => {
-      setIsMobile(window.innerWidth < 768 || 'ontouchstart' in window)
+    if (platformMode === 'mobile') {
+      setIsMobile(true)
+    } else {
+      setIsMobile(false)
     }
-    
-    checkMobile()
-    window.addEventListener('resize', checkMobile)
-    return () => window.removeEventListener('resize', checkMobile)
-  }, [])
+  }, [platformMode])
   useEffect(() => {
     const saved = localStorage.getItem("dodgeGame-bestScore")
     if (saved) {
@@ -151,72 +167,72 @@ export default function GamePage() {
   }
 
   return (
-    <div className="min-h-screen bg-background flex flex-col relative touch-none select-none">
-      {/* Хедер игры - адаптивный для мобильных */}
-      <div className="absolute top-0 left-0 right-0 z-20 flex items-center justify-between p-2 md:p-4 bg-background/90 backdrop-blur-sm border-b border-border">
+    <div className={`min-h-screen bg-background flex flex-col relative ${platformMode === 'mobile' ? 'touch-none select-none' : ''}`}>
+      {/* Хедер игры - разный для разных платформ */}
+      <div className={`absolute top-0 left-0 right-0 z-20 flex items-center justify-between ${platformMode === 'mobile' ? 'p-2' : 'p-4'} bg-background/90 backdrop-blur-sm border-b border-border`}>
         <Button
           variant="ghost"
-          size={isMobile ? "sm" : "sm"}
+          size="sm"
           onClick={handleMainMenu}
-          className="flex items-center gap-1 md:gap-2 text-xs md:text-sm"
+          className={`flex items-center gap-2 ${platformMode === 'mobile' ? 'text-xs' : 'text-sm'}`}
         >
-          <ArrowLeft className="h-3 w-3 md:h-4 md:w-4" />
-          {isMobile ? "Меню" : "Главное меню"}
+          <ArrowLeft className={`${platformMode === 'mobile' ? 'h-3 w-3' : 'h-4 w-4'}`} />
+          {platformMode === 'mobile' ? "Меню" : "Главное меню"}
         </Button>
         
-        <div className="flex items-center gap-1 md:gap-4">
+        <div className={`flex items-center ${platformMode === 'mobile' ? 'gap-1' : 'gap-4'}`}>
           <Button
             variant="ghost"
-            size={isMobile ? "sm" : "sm"}
+            size="sm"
             onClick={handleTogglePause}
-            className="flex items-center gap-1 md:gap-2 text-xs md:text-sm"
+            className={`flex items-center gap-2 ${platformMode === 'mobile' ? 'text-xs' : 'text-sm'}`}
             disabled={gameState === "gameOver"}
           >
             {gameState === "paused" ? (
               <>
-                <Play className="h-3 w-3 md:h-4 md:w-4" />
-                {isMobile ? "▶️" : "Продолжить"}
+                <Play className={`${platformMode === 'mobile' ? 'h-3 w-3' : 'h-4 w-4'}`} />
+                {platformMode === 'mobile' ? "▶️" : "Продолжить"}
               </>
             ) : (
               <>
-                <Pause className="h-3 w-3 md:h-4 md:w-4" />
-                {isMobile ? "⏸️" : "Пауза"}
+                <Pause className={`${platformMode === 'mobile' ? 'h-3 w-3' : 'h-4 w-4'}`} />
+                {platformMode === 'mobile' ? "⏸️" : "Пауза"}
               </>
             )}
           </Button>
-          <div className="text-sm md:text-lg font-bold">
-            {isMobile ? formatTime(score).replace(" сек", "с") : `Время: ${formatTime(score)}`}
+          <div className={`${platformMode === 'mobile' ? 'text-sm' : 'text-lg'} font-bold`}>
+            {platformMode === 'mobile' ? formatTime(score).replace(" сек", "с") : `Время: ${formatTime(score)}`}
           </div>
-          {!isMobile && (
-            <div className="text-xs md:text-sm text-muted-foreground">
+          {platformMode === 'desktop' && (
+            <div className="text-sm text-muted-foreground">
               Рекорд: {formatTime(bestScore)}
             </div>
           )}
-          {!isMobile && <ThemeToggle />}
+          {platformMode === 'desktop' && <ThemeToggle />}
         </div>
       </div>
 
       {/* Игровая область - полноэкранная */}
       {(gameState === "playing" || gameState === "paused") && (
         <>
-          {/* Экран паузы - адаптивный */}
+          {/* Экран паузы - разный для разных платформ */}
           {gameState === "paused" && (
             <div className="absolute inset-0 z-30 bg-background/90 backdrop-blur-sm flex items-center justify-center p-4">
-              <div className="text-center space-y-4 md:space-y-6 bg-card border border-border rounded-lg p-4 md:p-8 shadow-2xl max-w-sm md:max-w-md w-full">
-                <div className="text-4xl md:text-6xl">⏸️</div>
-                <h2 className="text-xl md:text-3xl font-bold">Игра на паузе</h2>
-                <div className="space-y-2 text-muted-foreground text-sm md:text-base">
-                  {!isMobile && (
+              <div className={`text-center space-y-6 bg-card border border-border rounded-lg p-8 shadow-2xl ${platformMode === 'mobile' ? 'max-w-sm w-full' : 'max-w-md'}`}>
+                <div className={`${platformMode === 'mobile' ? 'text-4xl' : 'text-6xl'}`}>⏸️</div>
+                <h2 className={`${platformMode === 'mobile' ? 'text-xl' : 'text-3xl'} font-bold`}>Игра на паузе</h2>
+                <div className={`space-y-2 text-muted-foreground ${platformMode === 'mobile' ? 'text-sm' : 'text-base'}`}>
+                  {platformMode === 'desktop' && (
                     <p>Нажмите <kbd className="px-2 py-1 bg-muted rounded text-xs">Пробел</kbd> или кнопку "Продолжить"</p>
                   )}
                   <p>чтобы возобновить игру</p>
                 </div>
-                <div className="flex flex-col md:flex-row gap-3 md:gap-4 justify-center">
-                  <Button onClick={handleTogglePause} className="flex items-center gap-2 w-full md:w-auto">
+                <div className={`flex gap-4 justify-center ${platformMode === 'mobile' ? 'flex-col' : 'flex-row'}`}>
+                  <Button onClick={handleTogglePause} className={`flex items-center gap-2 ${platformMode === 'mobile' ? 'w-full' : 'w-auto'}`}>
                     <Play className="h-4 w-4" />
                     Продолжить
                   </Button>
-                  <Button variant="outline" onClick={handleMainMenu} className="w-full md:w-auto">
+                  <Button variant="outline" onClick={handleMainMenu} className={`${platformMode === 'mobile' ? 'w-full' : 'w-auto'}`}>
                     <ArrowLeft className="h-4 w-4 mr-2" />
                     Главное меню
                   </Button>
@@ -239,8 +255,8 @@ export default function GamePage() {
             onEncounteredEnemiesUpdate={handleEncounteredEnemiesUpdate}
           />
 
-          {/* Мобильная панель внизу */}
-          {isMobile && (
+          {/* Мобильная панель внизу - только для мобильного режима */}
+          {platformMode === 'mobile' && (
             <div className="absolute bottom-0 left-0 right-0 z-20 bg-background/90 backdrop-blur-sm border-t border-border p-2">
               <div className="flex items-center justify-between text-xs">
                 <div className="flex items-center gap-2">
@@ -268,20 +284,20 @@ export default function GamePage() {
             killerEnemy={killerEnemy}
           />
           
-          {/* Уведомления о новых достижениях - адаптивные */}
+          {/* Уведомления о новых достижениях - разные для разных платформ */}
           {newAchievements.length > 0 && (
-            <div className="fixed top-16 md:top-24 right-2 md:right-4 z-50 space-y-2 max-w-xs md:max-w-sm">
+            <div className={`fixed z-50 space-y-2 ${platformMode === 'mobile' ? 'top-16 right-2 max-w-xs' : 'top-24 right-4 max-w-sm'}`}>
               {newAchievements.map((achievement) => (
                 <div
                   key={achievement.id}
-                  className="bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-lg p-3 md:p-4 shadow-2xl animate-bounce"
+                  className={`bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-lg shadow-2xl animate-bounce ${platformMode === 'mobile' ? 'p-3' : 'p-4'}`}
                 >
-                  <div className="flex items-center gap-2 md:gap-3">
-                    <span className="text-xl md:text-3xl">{achievement.icon}</span>
+                  <div className={`flex items-center ${platformMode === 'mobile' ? 'gap-2' : 'gap-3'}`}>
+                    <span className={`${platformMode === 'mobile' ? 'text-xl' : 'text-3xl'}`}>{achievement.icon}</span>
                     <div>
                       <div className="text-xs font-bold uppercase">Достижение!</div>
-                      <div className="font-bold text-sm md:text-base">{achievement.title}</div>
-                      <div className="text-xs md:text-sm opacity-90">{achievement.description}</div>
+                      <div className={`font-bold ${platformMode === 'mobile' ? 'text-sm' : 'text-base'}`}>{achievement.title}</div>
+                      <div className={`opacity-90 ${platformMode === 'mobile' ? 'text-xs' : 'text-sm'}`}>{achievement.description}</div>
                     </div>
                   </div>
                 </div>

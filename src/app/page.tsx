@@ -5,22 +5,49 @@ import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { ThemeToggle } from "@/components/theme-toggle"
 import { GameInstructions } from "@/components/game/GameInstructions"
-import { Trophy, Play, BookOpen, Award, Sparkles } from "lucide-react"
+import { PlatformSelector } from "@/components/PlatformSelector"
+import { Trophy, Play, BookOpen, Award, Sparkles, Settings } from "lucide-react"
 
 export default function Home() {
   const router = useRouter()
   const [showInstructions, setShowInstructions] = useState(false)
+  const [showPlatformSelector, setShowPlatformSelector] = useState(false)
   const [bestScore, setBestScore] = useState("0")
   const [isLoaded, setIsLoaded] = useState(false)
+  const [selectedPlatform, setSelectedPlatform] = useState<'desktop' | 'mobile' | null>(null)
 
   useEffect(() => {
     const score = localStorage.getItem("dodgeGame-bestScore") || "0"
     setBestScore(score)
+    
+    // Проверяем, выбрана ли уже платформа
+    const platform = localStorage.getItem("dodgeGame-platform") as 'desktop' | 'mobile' | null
+    setSelectedPlatform(platform)
+    
     setIsLoaded(true)
   }, [])
 
   const handleStartGame = () => {
-    router.push("/game")
+    if (!selectedPlatform) {
+      setShowPlatformSelector(true)
+    } else {
+      router.push(`/game?platform=${selectedPlatform}`)
+    }
+  }
+
+  const handlePlatformSelect = (platform: 'desktop' | 'mobile') => {
+    setSelectedPlatform(platform)
+    localStorage.setItem("dodgeGame-platform", platform)
+    setShowPlatformSelector(false)
+    router.push(`/game?platform=${platform}`)
+  }
+
+  const handleChangePlatform = () => {
+    setShowPlatformSelector(true)
+  }
+
+  if (showPlatformSelector) {
+    return <PlatformSelector onSelect={handlePlatformSelect} />
   }
 
   return (
@@ -109,6 +136,19 @@ export default function Home() {
             <Play className="h-6 w-6 mr-3 group-hover:animate-pulse" />
             Начать игру
           </Button>
+
+          {/* Кнопка смены платформы */}
+          {selectedPlatform && (
+            <Button
+              onClick={handleChangePlatform}
+              variant="outline"
+              size="sm"
+              className="w-full text-xs"
+            >
+              <Settings className="h-3 w-3 mr-2" />
+              Сменить платформу ({selectedPlatform === 'desktop' ? 'Компьютер' : 'Мобильное'})
+            </Button>
+          )}
 
           {/* Дополнительные кнопки */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
