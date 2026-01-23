@@ -613,8 +613,9 @@ export function GameCanvas({ gameState, onGameOver, onScoreUpdate, onEncountered
     const ctx = canvas?.getContext('2d')
     if (!canvas || !ctx || !gameStateRef.current) return
 
-    // Очищаем canvas
-    ctx.clearRect(0, 0, canvas.width, canvas.height)
+    // Очищаем canvas темным фоном
+    ctx.fillStyle = '#0f172a' // Темно-серый фон для игрового поля
+    ctx.fillRect(0, 0, canvas.width, canvas.height)
     
     const state = gameStateRef.current
 
@@ -971,7 +972,7 @@ export function GameCanvas({ gameState, onGameOver, onScoreUpdate, onEncountered
         ref={canvasRef}
         width={windowSize.width}
         height={windowSize.height}
-        className="bg-background cursor-none block w-full h-full"
+        className="bg-slate-900 dark:bg-background cursor-none block w-full h-full"
         style={{
           width: '100vw',
           height: '100vh',
