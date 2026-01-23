@@ -30,6 +30,9 @@ export default function AchievementsPage() {
   const timeAchievements = achievements.filter(a => a.type === 'time')
   const enemyAchievements = achievements.filter(a => a.type === 'enemy')
   const specialAchievements = achievements.filter(a => a.type === 'special')
+  const enduranceAchievements = achievements.filter(a => a.type === 'endurance')
+  const masteryAchievements = achievements.filter(a => a.type === 'mastery')
+  const luckAchievements = achievements.filter(a => a.type === 'luck')
 
   const formatDate = (timestamp?: number) => {
     if (!timestamp) return ''
@@ -171,6 +174,42 @@ export default function AchievementsPage() {
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {specialAchievements.map(achievement => (
+              <AchievementCard key={achievement.id} achievement={achievement} />
+            ))}
+          </div>
+        </div>
+
+        {/* Достижения за выносливость */}
+        <div>
+          <h2 className="text-2xl font-bold mb-4 flex items-center gap-2">
+            🔥 Достижения за выносливость
+          </h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {enduranceAchievements.map(achievement => (
+              <AchievementCard key={achievement.id} achievement={achievement} />
+            ))}
+          </div>
+        </div>
+
+        {/* Достижения за мастерство */}
+        <div>
+          <h2 className="text-2xl font-bold mb-4 flex items-center gap-2">
+            🎯 Достижения за мастерство
+          </h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {masteryAchievements.map(achievement => (
+              <AchievementCard key={achievement.id} achievement={achievement} />
+            ))}
+          </div>
+        </div>
+
+        {/* Достижения за удачу */}
+        <div>
+          <h2 className="text-2xl font-bold mb-4 flex items-center gap-2">
+            🍀 Достижения за удачу
+          </h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {luckAchievements.map(achievement => (
               <AchievementCard key={achievement.id} achievement={achievement} />
             ))}
           </div>

@@ -6,7 +6,7 @@ export interface Achievement {
   description: string
   icon: string
   requirement: number // Требование для разблокировки
-  type: 'time' | 'enemy' | 'special' // Тип достижения
+  type: 'time' | 'enemy' | 'special' | 'endurance' | 'mastery' | 'luck' // Тип достижения
   unlocked: boolean
   unlockedAt?: number // Timestamp разблокировки
 }
@@ -311,5 +311,251 @@ export const ACHIEVEMENTS: Omit<Achievement, 'unlocked' | 'unlockedAt'>[] = [
     icon: '🗺️',
     requirement: 1,
     type: 'special'
+  },
+
+  // Достижения за выносливость (10 достижений)
+  {
+    id: 'endurance_streak_3',
+    title: 'Тройная серия',
+    description: 'Сыграйте 3 игры подряд',
+    icon: '🔥',
+    requirement: 3,
+    type: 'endurance'
+  },
+  {
+    id: 'endurance_streak_5',
+    title: 'Пятерная серия',
+    description: 'Сыграйте 5 игр подряд',
+    icon: '🌟',
+    requirement: 5,
+    type: 'endurance'
+  },
+  {
+    id: 'endurance_streak_10',
+    title: 'Десятка подряд',
+    description: 'Сыграйте 10 игр подряд',
+    icon: '💫',
+    requirement: 10,
+    type: 'endurance'
+  },
+  {
+    id: 'endurance_daily_5',
+    title: 'Ежедневная пятерка',
+    description: 'Сыграйте 5 игр за один день',
+    icon: '📅',
+    requirement: 5,
+    type: 'endurance'
+  },
+  {
+    id: 'endurance_daily_10',
+    title: 'Дневной марафон',
+    description: 'Сыграйте 10 игр за один день',
+    icon: '🏃',
+    requirement: 10,
+    type: 'endurance'
+  },
+  {
+    id: 'endurance_weekly_25',
+    title: 'Недельный воин',
+    description: 'Сыграйте 25 игр за неделю',
+    icon: '⚔️',
+    requirement: 25,
+    type: 'endurance'
+  },
+  {
+    id: 'endurance_total_time_30min',
+    title: 'Полчаса в игре',
+    description: 'Проведите 30 минут в игре суммарно',
+    icon: '⏱️',
+    requirement: 1800,
+    type: 'endurance'
+  },
+  {
+    id: 'endurance_total_time_1hour',
+    title: 'Час в игре',
+    description: 'Проведите 1 час в игре суммарно',
+    icon: '🕐',
+    requirement: 3600,
+    type: 'endurance'
+  },
+  {
+    id: 'endurance_total_time_2hours',
+    title: 'Два часа в игре',
+    description: 'Проведите 2 часа в игре суммарно',
+    icon: '🕑',
+    requirement: 7200,
+    type: 'endurance'
+  },
+  {
+    id: 'endurance_comeback_king',
+    title: 'Король возвращений',
+    description: 'Улучшите рекорд 5 раз',
+    icon: '👑',
+    requirement: 5,
+    type: 'endurance'
+  },
+
+  // Достижения за мастерство (10 достижений)
+  {
+    id: 'mastery_close_call_10',
+    title: 'На волоске',
+    description: 'Избежьте столкновения 10 раз подряд',
+    icon: '😅',
+    requirement: 10,
+    type: 'mastery'
+  },
+  {
+    id: 'mastery_precision_60s',
+    title: 'Точность',
+    description: 'Продержитесь 60 секунд без резких движений',
+    icon: '🎯',
+    requirement: 60,
+    type: 'mastery'
+  },
+  {
+    id: 'mastery_edge_walker',
+    title: 'Ходок по краю',
+    description: 'Проведите 30 секунд у края экрана',
+    icon: '🚶',
+    requirement: 30,
+    type: 'mastery'
+  },
+  {
+    id: 'mastery_center_master',
+    title: 'Мастер центра',
+    description: 'Проведите 45 секунд в центре экрана',
+    icon: '🎪',
+    requirement: 45,
+    type: 'mastery'
+  },
+  {
+    id: 'mastery_smooth_operator',
+    title: 'Плавный оператор',
+    description: 'Играйте плавно без рывков 90 секунд',
+    icon: '🌊',
+    requirement: 90,
+    type: 'mastery'
+  },
+  {
+    id: 'mastery_multitasker',
+    title: 'Многозадачник',
+    description: 'Уклоняйтесь от 5 врагов одновременно',
+    icon: '🤹',
+    requirement: 5,
+    type: 'mastery'
+  },
+  {
+    id: 'mastery_speed_demon',
+    title: 'Демон скорости',
+    description: 'Двигайтесь на максимальной скорости 20 секунд',
+    icon: '💨',
+    requirement: 20,
+    type: 'mastery'
+  },
+  {
+    id: 'mastery_zen_master',
+    title: 'Мастер дзен',
+    description: 'Стойте неподвижно 10 секунд среди врагов',
+    icon: '🧘',
+    requirement: 10,
+    type: 'mastery'
+  },
+  {
+    id: 'mastery_corner_escape',
+    title: 'Побег из угла',
+    description: 'Выберитесь из угла окруженный врагами',
+    icon: '🏃‍♂️',
+    requirement: 1,
+    type: 'mastery'
+  },
+  {
+    id: 'mastery_perfect_circle',
+    title: 'Идеальный круг',
+    description: 'Двигайтесь по кругу 30 секунд',
+    icon: '⭕',
+    requirement: 30,
+    type: 'mastery'
+  },
+
+  // Достижения за удачу (10 достижений)
+  {
+    id: 'luck_bonus_collector',
+    title: 'Коллекционер бонусов',
+    description: 'Соберите 10 бонусов за игру',
+    icon: '🎁',
+    requirement: 10,
+    type: 'luck'
+  },
+  {
+    id: 'luck_shield_master',
+    title: 'Мастер щита',
+    description: 'Используйте щит 5 раз за игру',
+    icon: '🛡️',
+    requirement: 5,
+    type: 'luck'
+  },
+  {
+    id: 'luck_time_lord',
+    title: 'Повелитель времени',
+    description: 'Соберите 3 бонуса времени за игру',
+    icon: '⏰',
+    requirement: 3,
+    type: 'luck'
+  },
+  {
+    id: 'luck_invisible_man',
+    title: 'Человек-невидимка',
+    description: 'Будьте невидимым 30 секунд суммарно',
+    icon: '👻',
+    requirement: 30,
+    type: 'luck'
+  },
+  {
+    id: 'luck_giant_mode',
+    title: 'Режим гиганта',
+    description: 'Будьте увеличенным 45 секунд суммарно',
+    icon: '🦣',
+    requirement: 45,
+    type: 'luck'
+  },
+  {
+    id: 'luck_slow_motion',
+    title: 'Замедленная съемка',
+    description: 'Замедлите врагов на 60 секунд суммарно',
+    icon: '🐌',
+    requirement: 60,
+    type: 'luck'
+  },
+  {
+    id: 'luck_bonus_chain',
+    title: 'Цепочка бонусов',
+    description: 'Соберите 3 бонуса подряд за 10 секунд',
+    icon: '⛓️',
+    requirement: 3,
+    type: 'luck'
+  },
+  {
+    id: 'luck_last_second',
+    title: 'В последнюю секунду',
+    description: 'Соберите бонус за секунду до смерти',
+    icon: '⏱️',
+    requirement: 1,
+    type: 'luck'
+  },
+  {
+    id: 'luck_blessed',
+    title: 'Благословенный',
+    description: 'Имейте 3 активных бонуса одновременно',
+    icon: '✨',
+    requirement: 3,
+    type: 'luck'
+  },
+  {
+    id: 'luck_fortune_favors',
+    title: 'Фортуна благоволит',
+    description: 'Соберите бонус в первые 5 секунд игры',
+    icon: '🍀',
+    requirement: 1,
+    type: 'luck'
   }
 ]
