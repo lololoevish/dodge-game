@@ -104,8 +104,8 @@ export function checkSpecialAchievements(survivalTime: number, isFirstGame: bool
   const achievements = getAchievements()
   const newlyUnlocked: Achievement[] = []
   
-  // Быстрая смерть
-  if (survivalTime <= 5) {
+  // Быстрая смерть (3 секунды или меньше)
+  if (survivalTime <= 3) {
     const fastDeath = achievements.find(a => a.id === 'special_fast_death')
     if (fastDeath && !fastDeath.unlocked) {
       fastDeath.unlocked = true
@@ -124,11 +124,33 @@ export function checkSpecialAchievements(survivalTime: number, isFirstGame: bool
     }
   }
   
+  // Специальные временные достижения
+  if (survivalTime === 77) {
+    const lucky7 = achievements.find(a => a.id === 'special_lucky_7')
+    if (lucky7 && !lucky7.unlocked) {
+      lucky7.unlocked = true
+      lucky7.unlockedAt = Date.now()
+      newlyUnlocked.push(lucky7)
+    }
+  }
+  
+  if (survivalTime === 60) {
+    const perfectMinute = achievements.find(a => a.id === 'special_perfect_minute')
+    if (perfectMinute && !perfectMinute.unlocked) {
+      perfectMinute.unlocked = true
+      perfectMinute.unlockedAt = Date.now()
+      newlyUnlocked.push(perfectMinute)
+    }
+  }
+  
   // Количество игр
   const gamesPlayed = getGamesPlayed()
   const gamesAchievements = [
+    { id: 'special_5_games', count: 5 },
     { id: 'special_10_games', count: 10 },
-    { id: 'special_50_games', count: 50 }
+    { id: 'special_25_games', count: 25 },
+    { id: 'special_50_games', count: 50 },
+    { id: 'special_100_games', count: 100 }
   ]
   
   gamesAchievements.forEach(({ id, count }) => {

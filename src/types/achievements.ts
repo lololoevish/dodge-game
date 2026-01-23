@@ -19,13 +19,29 @@ export interface AchievementProgress {
 
 // Список всех достижений
 export const ACHIEVEMENTS: Omit<Achievement, 'unlocked' | 'unlockedAt'>[] = [
-  // Временные достижения
+  // Временные достижения (12 достижений)
+  {
+    id: 'survivor_5',
+    title: 'Первые секунды',
+    description: 'Продержитесь 5 секунд',
+    icon: '🌱',
+    requirement: 5,
+    type: 'time'
+  },
   {
     id: 'survivor_10',
     title: 'Первые шаги',
     description: 'Продержитесь 10 секунд',
     icon: '🎯',
     requirement: 10,
+    type: 'time'
+  },
+  {
+    id: 'survivor_20',
+    title: 'Учусь уклоняться',
+    description: 'Продержитесь 20 секунд',
+    icon: '🏃',
+    requirement: 20,
     type: 'time'
   },
   {
@@ -37,39 +53,71 @@ export const ACHIEVEMENTS: Omit<Achievement, 'unlocked' | 'unlockedAt'>[] = [
     type: 'time'
   },
   {
+    id: 'survivor_45',
+    title: 'Становлюсь лучше',
+    description: 'Продержитесь 45 секунд',
+    icon: '📈',
+    requirement: 45,
+    type: 'time'
+  },
+  {
     id: 'survivor_60',
     title: 'Опытный игрок',
-    description: 'Продержитесь 60 секунд',
+    description: 'Продержитесь 1 минуту',
     icon: '🥈',
     requirement: 60,
     type: 'time'
   },
   {
-    id: 'survivor_100',
-    title: 'Мастер уклонения',
-    description: 'Продержитесь 100 секунд',
-    icon: '🥇',
-    requirement: 100,
+    id: 'survivor_90',
+    title: 'Мастер',
+    description: 'Продержитесь 1.5 минуты',
+    icon: '⭐',
+    requirement: 90,
     type: 'time'
   },
   {
     id: 'survivor_120',
-    title: 'Легенда',
-    description: 'Продержитесь 120 секунд',
-    icon: '💎',
+    title: 'Эксперт уклонения',
+    description: 'Продержитесь 2 минуты',
+    icon: '🥇',
     requirement: 120,
     type: 'time'
   },
   {
+    id: 'survivor_150',
+    title: 'Виртуоз',
+    description: 'Продержитесь 2.5 минуты',
+    icon: '🎨',
+    requirement: 150,
+    type: 'time'
+  },
+  {
     id: 'survivor_180',
-    title: 'Бессмертный',
+    title: 'Легенда',
     description: 'Продержитесь 3 минуты',
-    icon: '👑',
+    icon: '💎',
     requirement: 180,
     type: 'time'
   },
+  {
+    id: 'survivor_240',
+    title: 'Бессмертный',
+    description: 'Продержитесь 4 минуты',
+    icon: '👑',
+    requirement: 240,
+    type: 'time'
+  },
+  {
+    id: 'survivor_300',
+    title: 'Божество уклонения',
+    description: 'Продержитесь 5 минут',
+    icon: '🌟',
+    requirement: 300,
+    type: 'time'
+  },
   
-  // Достижения за встречу с врагами
+  // Достижения за встречу с врагами (12 достижений)
   {
     id: 'enemy_first',
     title: 'Первая встреча',
@@ -79,39 +127,95 @@ export const ACHIEVEMENTS: Omit<Achievement, 'unlocked' | 'unlockedAt'>[] = [
     type: 'enemy'
   },
   {
-    id: 'enemy_5',
-    title: 'Знакомство с опасностью',
-    description: 'Встретьте 5 разных врагов',
+    id: 'enemy_2',
+    title: 'Двойная угроза',
+    description: 'Встретьте 2 разных врага',
+    icon: '👥',
+    requirement: 2,
+    type: 'enemy'
+  },
+  {
+    id: 'enemy_3',
+    title: 'Тройная опасность',
+    description: 'Встретьте 3 разных врага',
     icon: '🎭',
+    requirement: 3,
+    type: 'enemy'
+  },
+  {
+    id: 'enemy_5',
+    title: 'Знакомство с хаосом',
+    description: 'Встретьте 5 разных врагов',
+    icon: '🌪️',
     requirement: 5,
     type: 'enemy'
   },
   {
+    id: 'enemy_7',
+    title: 'Исследователь угроз',
+    description: 'Встретьте 7 разных врагов',
+    icon: '🔍',
+    requirement: 7,
+    type: 'enemy'
+  },
+  {
     id: 'enemy_10',
-    title: 'Коллекционер угроз',
+    title: 'Коллекционер опасностей',
     description: 'Встретьте 10 разных врагов',
     icon: '📚',
     requirement: 10,
     type: 'enemy'
   },
   {
-    id: 'enemy_all',
-    title: 'Знаток всех опасностей',
-    description: 'Встретьте всех 13 врагов',
+    id: 'enemy_12',
+    title: 'Почти все',
+    description: 'Встретьте 12 разных врагов',
+    icon: '🎯',
+    requirement: 12,
+    type: 'enemy'
+  },
+  {
+    id: 'enemy_14',
+    title: 'Знаток всех угроз',
+    description: 'Встретьте 14 разных врагов',
     icon: '🏆',
-    requirement: 13,
+    requirement: 14,
+    type: 'enemy'
+  },
+  {
+    id: 'enemy_16',
+    title: 'Мастер всех опасностей',
+    description: 'Встретьте всех 16 врагов',
+    icon: '👑',
+    requirement: 16,
+    type: 'enemy'
+  },
+  {
+    id: 'enemy_chaser',
+    title: 'Встреча с преследователем',
+    description: 'Встретьте красного преследователя',
+    icon: '🔴',
+    requirement: 1,
+    type: 'enemy'
+  },
+  {
+    id: 'enemy_bouncing',
+    title: 'Прыгучий знакомый',
+    description: 'Встретьте прыгающий круг',
+    icon: '🟢',
+    requirement: 1,
+    type: 'enemy'
+  },
+  {
+    id: 'enemy_star',
+    title: 'Звездная встреча',
+    description: 'Встретьте звезду-генератор',
+    icon: '⭐',
+    requirement: 1,
     type: 'enemy'
   },
   
-  // Специальные достижения
-  {
-    id: 'special_fast_death',
-    title: 'Быстрый старт',
-    description: 'Проиграйте за первые 5 секунд',
-    icon: '⚡',
-    requirement: 5,
-    type: 'special'
-  },
+  // Специальные достижения (12 достижений)
   {
     id: 'special_first_game',
     title: 'Первая попытка',
@@ -121,19 +225,91 @@ export const ACHIEVEMENTS: Omit<Achievement, 'unlocked' | 'unlockedAt'>[] = [
     type: 'special'
   },
   {
+    id: 'special_fast_death',
+    title: 'Быстрый финал',
+    description: 'Проиграйте за первые 3 секунды',
+    icon: '⚡',
+    requirement: 3,
+    type: 'special'
+  },
+  {
+    id: 'special_5_games',
+    title: 'Настойчивость',
+    description: 'Сыграйте 5 игр',
+    icon: '🔥',
+    requirement: 5,
+    type: 'special'
+  },
+  {
     id: 'special_10_games',
     title: 'Упорство',
     description: 'Сыграйте 10 игр',
-    icon: '🔥',
+    icon: '💪',
     requirement: 10,
+    type: 'special'
+  },
+  {
+    id: 'special_25_games',
+    title: 'Увлеченный игрок',
+    description: 'Сыграйте 25 игр',
+    icon: '🎯',
+    requirement: 25,
     type: 'special'
   },
   {
     id: 'special_50_games',
     title: 'Преданный игрок',
     description: 'Сыграйте 50 игр',
-    icon: '💪',
+    icon: '🏅',
     requirement: 50,
+    type: 'special'
+  },
+  {
+    id: 'special_100_games',
+    title: 'Ветеран',
+    description: 'Сыграйте 100 игр',
+    icon: '🎖️',
+    requirement: 100,
+    type: 'special'
+  },
+  {
+    id: 'special_lucky_7',
+    title: 'Счастливая семерка',
+    description: 'Продержитесь ровно 77 секунд',
+    icon: '🍀',
+    requirement: 77,
+    type: 'special'
+  },
+  {
+    id: 'special_perfect_minute',
+    title: 'Идеальная минута',
+    description: 'Продержитесь ровно 60 секунд',
+    icon: '⏰',
+    requirement: 60,
+    type: 'special'
+  },
+  {
+    id: 'special_comeback',
+    title: 'Возвращение',
+    description: 'Улучшите свой рекорд на 30+ секунд',
+    icon: '📈',
+    requirement: 30,
+    type: 'special'
+  },
+  {
+    id: 'special_marathon',
+    title: 'Марафонец',
+    description: 'Сыграйте 10 игр подряд за день',
+    icon: '🏃‍♂️',
+    requirement: 10,
+    type: 'special'
+  },
+  {
+    id: 'special_explorer',
+    title: 'Исследователь',
+    description: 'Посетите все разделы игры',
+    icon: '🗺️',
+    requirement: 1,
     type: 'special'
   }
 ]
