@@ -5,7 +5,6 @@ import { Button } from "@/components/ui/button"
 import { ThemeToggle } from "@/components/theme-toggle"
 import { GameCanvas } from "@/components/game/GameCanvas"
 import { GameOverScreen } from "@/components/game/GameOverScreen"
-import { EnemyGuide } from "@/components/game/EnemyGuide"
 import { EnemyNotificationsContainer } from "@/components/game/EnemyNotification"
 import { ArrowLeft, Pause, Play } from "lucide-react"
 import { useRouter } from "next/navigation"
@@ -211,32 +210,10 @@ export default function GamePage() {
             </div>
           )}
           
-          {/* Инструкции - плавающие поверх игры */}
-          <div className="absolute top-20 left-1/2 transform -translate-x-1/2 z-10 text-center space-y-2 bg-background/60 backdrop-blur-sm rounded-lg p-4 max-w-md">
-            <p className="text-sm text-muted-foreground">
-              🖥️ Управляйте синим курсором мышью или касанием
-            </p>
-            <p className="text-xs text-muted-foreground">
-              ⚠️ Избегайте ВСЕХ цветных фигур! Каждая - смертельна!
-            </p>
-            <p className="text-xs text-amber-500 font-medium">
-              🕰️ Новые фигуры появляются каждые 5-10 секунд
-            </p>
-            <p className="text-xs text-blue-500 font-medium">
-              ⏸️ Нажмите <kbd className="px-1 bg-muted rounded text-xs">Пробел</kbd> для паузы
-            </p>
-          </div>
-          
           {/* Уведомления о новых врагах */}
           <EnemyNotificationsContainer
             newEnemies={newEnemies}
             onDismiss={handleDismissNotification}
-          />
-          
-          {/* Справочник врагов */}
-          <EnemyGuide 
-            encounteredEnemies={encounteredEnemies}
-            currentGameTime={score}
           />
           
           <GameCanvas
