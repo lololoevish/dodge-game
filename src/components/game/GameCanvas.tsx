@@ -136,7 +136,7 @@ export function GameCanvas({ gameState, onGameOver, onScoreUpdate, onEncountered
     reflectingProjectileSize: 10,
     reflectingProjectileSpawnTime: 50000,
     // Бонусы
-    bonusSpawnTime: 20000,
+    bonusSpawnTime: 8000, // Уменьшил для более частого появления
     bonusSize: 15,
     shieldDuration: 5000,
     slowEnemiesDuration: 8000,
@@ -248,7 +248,7 @@ export function GameCanvas({ gameState, onGameOver, onScoreUpdate, onEncountered
       gravityTrapSpawnTime: 80000,
       reflectingProjectileSize: 10,
       reflectingProjectileSpawnTime: 50000,
-      bonusSpawnTime: 20000,
+      bonusSpawnTime: 8000, // Уменьшил для более частого появления
       bonusSize: 15,
       shieldDuration: 5000,
       slowEnemiesDuration: 8000,
@@ -415,7 +415,7 @@ export function GameCanvas({ gameState, onGameOver, onScoreUpdate, onEncountered
       gravityTrapSpawnTime: 800, // 80 секунд
       reflectingProjectileSize: 10,
       reflectingProjectileSpawnTime: 50000, // 50 секунд
-      bonusSpawnTime: 20000,
+      bonusSpawnTime: 8000, // Уменьшил для более частого появления
       bonusSize: 15,
       shieldDuration: 5000,
       slowEnemiesDuration: 8000,

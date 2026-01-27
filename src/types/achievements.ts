@@ -395,165 +395,165 @@ export const ACHIEVEMENTS: Omit<Achievement, 'unlocked' | 'unlockedAt'>[] = [
     type: 'endurance'
   },
 
-  // Достижения за мастерство (10 достижений)
+  // Достижения за мастерство (10 достижений) - упрощенные
   {
-    id: 'mastery_close_call_10',
-    title: 'На волоске',
-    description: 'Избежьте столкновения 10 раз подряд',
-    icon: '😅',
-    requirement: 10,
+    id: 'mastery_survivor_15',
+    title: 'Быстрый старт',
+    description: 'Продержитесь 15 секунд',
+    icon: '🚀',
+    requirement: 15,
     type: 'mastery'
   },
   {
-    id: 'mastery_precision_60s',
-    title: 'Точность',
-    description: 'Продержитесь 60 секунд без резких движений',
+    id: 'mastery_survivor_25',
+    title: 'Четверть минуты',
+    description: 'Продержитесь 25 секунд',
+    icon: '⏰',
+    requirement: 25,
+    type: 'mastery'
+  },
+  {
+    id: 'mastery_survivor_35',
+    title: 'Треть минуты',
+    description: 'Продержитесь 35 секунд',
     icon: '🎯',
-    requirement: 60,
+    requirement: 35,
     type: 'mastery'
   },
   {
-    id: 'mastery_edge_walker',
-    title: 'Ходок по краю',
-    description: 'Проведите 30 секунд у края экрана',
-    icon: '🚶',
-    requirement: 30,
+    id: 'mastery_survivor_50',
+    title: 'Полминуты',
+    description: 'Продержитесь 50 секунд',
+    icon: '⭐',
+    requirement: 50,
     type: 'mastery'
   },
   {
-    id: 'mastery_center_master',
-    title: 'Мастер центра',
-    description: 'Проведите 45 секунд в центре экрана',
-    icon: '🎪',
-    requirement: 45,
+    id: 'mastery_survivor_70',
+    title: 'Больше минуты',
+    description: 'Продержитесь 70 секунд',
+    icon: '💫',
+    requirement: 70,
     type: 'mastery'
   },
   {
-    id: 'mastery_smooth_operator',
-    title: 'Плавный оператор',
-    description: 'Играйте плавно без рывков 90 секунд',
-    icon: '🌊',
-    requirement: 90,
+    id: 'mastery_survivor_80',
+    title: 'Почти полторы',
+    description: 'Продержитесь 80 секунд',
+    icon: '🌟',
+    requirement: 80,
     type: 'mastery'
   },
   {
-    id: 'mastery_multitasker',
-    title: 'Многозадачник',
-    description: 'Уклоняйтесь от 5 врагов одновременно',
-    icon: '🤹',
-    requirement: 5,
+    id: 'mastery_survivor_100',
+    title: 'Сотня секунд',
+    description: 'Продержитесь 100 секунд',
+    icon: '💯',
+    requirement: 100,
     type: 'mastery'
   },
   {
-    id: 'mastery_speed_demon',
-    title: 'Демон скорости',
-    description: 'Двигайтесь на максимальной скорости 20 секунд',
-    icon: '💨',
-    requirement: 20,
+    id: 'mastery_survivor_130',
+    title: 'Больше двух минут',
+    description: 'Продержитесь 130 секунд',
+    icon: '🏆',
+    requirement: 130,
     type: 'mastery'
   },
   {
-    id: 'mastery_zen_master',
-    title: 'Мастер дзен',
-    description: 'Стойте неподвижно 10 секунд среди врагов',
-    icon: '🧘',
-    requirement: 10,
+    id: 'mastery_survivor_160',
+    title: 'Почти три минуты',
+    description: 'Продержитесь 160 секунд',
+    icon: '👑',
+    requirement: 160,
     type: 'mastery'
   },
   {
-    id: 'mastery_corner_escape',
-    title: 'Побег из угла',
-    description: 'Выберитесь из угла окруженный врагами',
-    icon: '🏃‍♂️',
-    requirement: 1,
-    type: 'mastery'
-  },
-  {
-    id: 'mastery_perfect_circle',
-    title: 'Идеальный круг',
-    description: 'Двигайтесь по кругу 30 секунд',
-    icon: '⭕',
-    requirement: 30,
+    id: 'mastery_survivor_200',
+    title: 'Двести секунд',
+    description: 'Продержитесь 200 секунд',
+    icon: '🌟',
+    requirement: 200,
     type: 'mastery'
   },
 
-  // Достижения за удачу (10 достижений)
+  // Достижения за удачу (10 достижений) - упрощенные
   {
-    id: 'luck_bonus_collector',
-    title: 'Коллекционер бонусов',
-    description: 'Соберите 10 бонусов за игру',
+    id: 'luck_first_bonus',
+    title: 'Первый бонус',
+    description: 'Соберите первый бонус',
     icon: '🎁',
-    requirement: 10,
-    type: 'luck'
-  },
-  {
-    id: 'luck_shield_master',
-    title: 'Мастер щита',
-    description: 'Используйте щит 5 раз за игру',
-    icon: '🛡️',
-    requirement: 5,
-    type: 'luck'
-  },
-  {
-    id: 'luck_time_lord',
-    title: 'Повелитель времени',
-    description: 'Соберите 3 бонуса времени за игру',
-    icon: '⏰',
-    requirement: 3,
-    type: 'luck'
-  },
-  {
-    id: 'luck_invisible_man',
-    title: 'Человек-невидимка',
-    description: 'Будьте невидимым 30 секунд суммарно',
-    icon: '👻',
-    requirement: 30,
-    type: 'luck'
-  },
-  {
-    id: 'luck_giant_mode',
-    title: 'Режим гиганта',
-    description: 'Будьте увеличенным 45 секунд суммарно',
-    icon: '🦣',
-    requirement: 45,
-    type: 'luck'
-  },
-  {
-    id: 'luck_slow_motion',
-    title: 'Замедленная съемка',
-    description: 'Замедлите врагов на 60 секунд суммарно',
-    icon: '🐌',
-    requirement: 60,
-    type: 'luck'
-  },
-  {
-    id: 'luck_bonus_chain',
-    title: 'Цепочка бонусов',
-    description: 'Соберите 3 бонуса подряд за 10 секунд',
-    icon: '⛓️',
-    requirement: 3,
-    type: 'luck'
-  },
-  {
-    id: 'luck_last_second',
-    title: 'В последнюю секунду',
-    description: 'Соберите бонус за секунду до смерти',
-    icon: '⏱️',
     requirement: 1,
     type: 'luck'
   },
   {
-    id: 'luck_blessed',
-    title: 'Благословенный',
-    description: 'Имейте 3 активных бонуса одновременно',
-    icon: '✨',
+    id: 'luck_bonus_3',
+    title: 'Тройка бонусов',
+    description: 'Соберите 3 бонуса за игру',
+    icon: '🎯',
     requirement: 3,
     type: 'luck'
   },
   {
-    id: 'luck_fortune_favors',
-    title: 'Фортуна благоволит',
-    description: 'Соберите бонус в первые 5 секунд игры',
+    id: 'luck_bonus_5',
+    title: 'Пятерка бонусов',
+    description: 'Соберите 5 бонусов за игру',
+    icon: '⭐',
+    requirement: 5,
+    type: 'luck'
+  },
+  {
+    id: 'luck_shield_user',
+    title: 'Защищенный',
+    description: 'Используйте щит',
+    icon: '🛡️',
+    requirement: 1,
+    type: 'luck'
+  },
+  {
+    id: 'luck_time_bonus',
+    title: 'Дополнительное время',
+    description: 'Соберите бонус времени',
+    icon: '⏰',
+    requirement: 1,
+    type: 'luck'
+  },
+  {
+    id: 'luck_slow_enemies',
+    title: 'Замедлитель',
+    description: 'Замедлите врагов',
+    icon: '🐌',
+    requirement: 1,
+    type: 'luck'
+  },
+  {
+    id: 'luck_size_up',
+    title: 'Увеличение',
+    description: 'Увеличьте размер игрока',
+    icon: '🔍',
+    requirement: 1,
+    type: 'luck'
+  },
+  {
+    id: 'luck_invisible',
+    title: 'Невидимка',
+    description: 'Станьте невидимым',
+    icon: '👻',
+    requirement: 1,
+    type: 'luck'
+  },
+  {
+    id: 'luck_double_bonus',
+    title: 'Двойной эффект',
+    description: 'Имейте 2 активных бонуса одновременно',
+    icon: '✨',
+    requirement: 2,
+    type: 'luck'
+  },
+  {
+    id: 'luck_early_bonus',
+    title: 'Ранняя удача',
+    description: 'Соберите бонус в первые 10 секунд',
     icon: '🍀',
     requirement: 1,
     type: 'luck'

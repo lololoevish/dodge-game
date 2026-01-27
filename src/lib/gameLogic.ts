@@ -54,7 +54,7 @@ export const defaultGameConfig: GameConfig = {
   reflectingProjectileSize: 10,
   reflectingProjectileSpawnTime: 50000,
   // Параметры для бонусов
-  bonusSpawnTime: 20000,
+  bonusSpawnTime: 8000, // Уменьшил с 20000 до 8000 (8 секунд)
   bonusSize: 15,
   shieldDuration: 5000,
   slowEnemiesDuration: 8000,
