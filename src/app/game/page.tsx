@@ -13,11 +13,14 @@ import {
   checkTimeAchievements, 
   checkEnemyAchievements, 
   checkSpecialAchievements,
+  checkBonusAchievements,
+  checkEnduranceAchievements,
   incrementGamesPlayed,
-  getGamesPlayed
+  getGamesPlayed,
+  addTotalTime
 } from "@/lib/achievementManager"
 import type { Achievement } from "@/types/achievements"
-import { GameEntity, ActiveBonus } from "@/types/game"
+import { GameEntity, ActiveBonus, BonusType } from "@/types/game"
  
 export default function GamePage() {
   const router = useRouter()
@@ -32,6 +35,7 @@ export default function GamePage() {
   const [isFirstGame, setIsFirstGame] = useState(false)
   const [killerEnemy, setKillerEnemy] = useState<GameEntity | null>(null);
   const [activeBonuses, setActiveBonuses] = useState<ActiveBonus[]>([]) // Активные бонусы
+  const [bonusesCollectedThisGame, setBonusesCollectedThisGame] = useState(0) // Бонусы за эту игру
 
   // Получение платформы из URL или localStorage
   const [platformMode, setPlatformMode] = useState<'desktop' | 'mobile'>('desktop')
@@ -99,24 +103,31 @@ export default function GamePage() {
       localStorage.setItem("dodgeGame-bestScore", finalScore.toString())
     }
     
+    // Добавляем время к общему времени
+    addTotalTime(finalScore)
+    
     // Увеличиваем счетчик игр
     incrementGamesPlayed()
     
-    // Проверяем достижения
+    // Проверяем все типы достижений
     const timeAchievements = checkTimeAchievements(finalScore)
     const enemyAchievements = checkEnemyAchievements(encounteredEnemies)
     const specialAchievements = checkSpecialAchievements(finalScore, isFirstGame)
+    const bonusAchievements = checkBonusAchievements(bonusesCollectedThisGame, activeBonuses)
+    const enduranceAchievements = checkEnduranceAchievements()
     
     const allNewAchievements = [
       ...timeAchievements,
       ...enemyAchievements,
-      ...specialAchievements
+      ...specialAchievements,
+      ...bonusAchievements,
+      ...enduranceAchievements
     ]
     
     if (allNewAchievements.length > 0) {
       setNewAchievements(allNewAchievements)
     }
-  }, [bestScore, encounteredEnemies, isFirstGame])
+  }, [bestScore, encounteredEnemies, isFirstGame, bonusesCollectedThisGame, activeBonuses])
 
   // Обновление счета
   const handleScoreUpdate = useCallback((newScore: number) => {
@@ -139,6 +150,23 @@ export default function GamePage() {
   const handleActiveBonusesUpdate = useCallback((bonuses: ActiveBonus[]) => {
     setActiveBonuses(bonuses)
   }, [])
+
+  // Обработка сбора бонуса
+  const handleBonusCollected = useCallback((bonusType: BonusType) => {
+    setBonusesCollectedThisGame(prev => prev + 1)
+    
+    // Проверяем достижения за бонусы
+    const bonusAchievements = checkBonusAchievements(
+      bonusesCollectedThisGame + 1, 
+      activeBonuses, 
+      bonusType,
+      score
+    )
+    
+    if (bonusAchievements.length > 0) {
+      setNewAchievements(prev => [...prev, ...bonusAchievements])
+    }
+  }, [bonusesCollectedThisGame, activeBonuses, score])
   // Удаление уведомления о враге
   const handleDismissNotification = useCallback((enemyType: string) => {
     setNewEnemies(prev => prev.filter(e => e !== enemyType))
@@ -153,6 +181,7 @@ export default function GamePage() {
     setPreviousEncountered([])
     setNewAchievements([])
     setActiveBonuses([]) // Очищаем активные бонусы
+    setBonusesCollectedThisGame(0) // Сбрасываем счетчик бонусов
     setIsFirstGame(false)
     setGameKey(prev => prev + 1) // Принудительно пересоздаем GameCanvas
     setKillerEnemy(null);
@@ -279,6 +308,7 @@ export default function GamePage() {
             onScoreUpdate={handleScoreUpdate}
             onEncounteredEnemiesUpdate={handleEncounteredEnemiesUpdate}
             onActiveBonusesUpdate={handleActiveBonusesUpdate}
+            onBonusCollected={handleBonusCollected}
             className="absolute inset-0 w-full h-full"
           />
 

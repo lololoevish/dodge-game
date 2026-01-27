@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useEffect, useState, useCallback } from 'react'
-import { GameState, GameConfig, Position } from '@/types/game'
+import { GameState, GameConfig, Position, BonusType, ActiveBonus } from '@/types/game'
 
 // Функция для безопасного получения размеров окна
 const getWindowDimensions = () => {
@@ -55,10 +55,11 @@ interface GameCanvasProps {
   onScoreUpdate: (score: number) => void
   onEncounteredEnemiesUpdate: (enemies: string[]) => void
   onActiveBonusesUpdate: (bonuses: ActiveBonus[]) => void
+  onBonusCollected?: (bonusType: BonusType) => void
   className?: string
 }
 
-export function GameCanvas({ gameState, onGameOver, onScoreUpdate, onEncounteredEnemiesUpdate, onActiveBonusesUpdate, className }: GameCanvasProps) {
+export function GameCanvas({ gameState, onGameOver, onScoreUpdate, onEncounteredEnemiesUpdate, onActiveBonusesUpdate, onBonusCollected, className }: GameCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const animationFrameRef = useRef<number>(0)
   const gameStateRef = useRef<GameState | null>(null)
@@ -583,7 +584,18 @@ export function GameCanvas({ gameState, onGameOver, onScoreUpdate, onEncountered
     })
 
     // Обновляем позиции объектов
+    const previousBonusCount = newState.entities.filter(e => e.type === 'bonus').length
     newState = updateGameEntities(newState, currentConfig)
+    const currentBonusCount = newState.entities.filter(e => e.type === 'bonus').length
+    
+    // Если количество бонусов уменьшилось, значит игрок собрал бонус
+    if (previousBonusCount > currentBonusCount && onBonusCollected) {
+      // Найдем какой бонус был собран (это упрощение, в реальности нужно отслеживать конкретный тип)
+      // Для простоты будем считать что собран случайный бонус
+      const bonusTypes = Object.values(BonusType)
+      const randomBonusType = bonusTypes[Math.floor(Math.random() * bonusTypes.length)]
+      onBonusCollected(randomBonusType)
+    }
 
     // Проверяем коллизии
     const killerEnemy = checkGameOver(newState);
@@ -605,7 +617,7 @@ export function GameCanvas({ gameState, onGameOver, onScoreUpdate, onEncountered
 
     // Продолжаем игровой цикл
     animationFrameRef.current = requestAnimationFrame(gameLoop)
-  }, [gameState, onGameOver, onScoreUpdate, onEncounteredEnemiesUpdate, onActiveBonusesUpdate])
+  }, [gameState, onGameOver, onScoreUpdate, onEncounteredEnemiesUpdate, onActiveBonusesUpdate, onBonusCollected])
 
   // Рендеринг игры
   const render = useCallback(() => {

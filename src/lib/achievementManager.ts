@@ -1,9 +1,13 @@
 // Менеджер достижений
 
 import { Achievement, AchievementProgress, ACHIEVEMENTS } from '@/types/achievements'
+import { BonusType, ActiveBonus } from '@/types/game'
 
 const STORAGE_KEY = 'dodgeGame-achievements'
 const GAMES_PLAYED_KEY = 'dodgeGame-gamesPlayed'
+const TOTAL_TIME_KEY = 'dodgeGame-totalTime'
+const BONUSES_COLLECTED_KEY = 'dodgeGame-bonusesCollected'
+const BEST_SCORE_KEY = 'dodgeGame-bestScore'
 
 // Получить все достижения из localStorage
 export function getAchievements(): Achievement[] {
@@ -60,7 +64,7 @@ export function checkTimeAchievements(survivalTime: number): Achievement[] {
   const newlyUnlocked: Achievement[] = []
   
   achievements.forEach(achievement => {
-    if (achievement.type === 'time' && 
+    if ((achievement.type === 'time' || achievement.type === 'mastery') && 
         !achievement.unlocked && 
         survivalTime >= achievement.requirement) {
       achievement.unlocked = true
@@ -90,8 +94,17 @@ export function checkEnemyAchievements(encounteredEnemies: string[]): Achievemen
       if (achievement.id.startsWith('enemy_') && 
           !achievement.id.includes('chaser') && 
           !achievement.id.includes('bouncing') && 
-          !achievement.id.includes('star')) {
+          !achievement.id.includes('star') &&
+          !achievement.id.includes('triangle') &&
+          !achievement.id.includes('lightning') &&
+          !achievement.id.includes('fire') &&
+          achievement.id !== 'enemy_first') {
         shouldUnlock = enemyCount >= achievement.requirement
+      }
+      
+      // Первый враг
+      if (achievement.id === 'enemy_first' && enemyCount >= 1) {
+        shouldUnlock = true
       }
       
       // Проверяем достижения за конкретных врагов
@@ -102,6 +115,86 @@ export function checkEnemyAchievements(encounteredEnemies: string[]): Achievemen
         shouldUnlock = true
       }
       if (achievement.id === 'enemy_star' && encounteredEnemies.includes('star')) {
+        shouldUnlock = true
+      }
+      if (achievement.id === 'enemy_triangle' && encounteredEnemies.includes('triangle')) {
+        shouldUnlock = true
+      }
+      if (achievement.id === 'enemy_lightning' && encounteredEnemies.includes('lightning')) {
+        shouldUnlock = true
+      }
+      if (achievement.id === 'enemy_fire' && encounteredEnemies.includes('fire')) {
+        shouldUnlock = true
+      }
+      
+      if (shouldUnlock) {
+        achievement.unlocked = true
+        achievement.unlockedAt = Date.now()
+        newlyUnlocked.push(achievement)
+      }
+    }
+  })
+  
+  if (newlyUnlocked.length > 0) {
+    saveAchievements(achievements)
+  }
+  
+  return newlyUnlocked
+}
+
+// Проверить достижения за бонусы
+export function checkBonusAchievements(
+  bonusesCollectedThisGame: number, 
+  activeBonuses: ActiveBonus[], 
+  bonusType?: BonusType,
+  gameTime?: number
+): Achievement[] {
+  const achievements = getAchievements()
+  const newlyUnlocked: Achievement[] = []
+  
+  achievements.forEach(achievement => {
+    if (achievement.type === 'luck' && !achievement.unlocked) {
+      let shouldUnlock = false
+      
+      // Первый бонус
+      if (achievement.id === 'luck_first_bonus' && bonusesCollectedThisGame >= 1) {
+        shouldUnlock = true
+      }
+      
+      // Количество бонусов за игру
+      if (achievement.id === 'luck_bonus_3' && bonusesCollectedThisGame >= 3) {
+        shouldUnlock = true
+      }
+      if (achievement.id === 'luck_bonus_5' && bonusesCollectedThisGame >= 5) {
+        shouldUnlock = true
+      }
+      
+      // Конкретные типы бонусов
+      if (bonusType) {
+        if (achievement.id === 'luck_shield_user' && bonusType === BonusType.SHIELD) {
+          shouldUnlock = true
+        }
+        if (achievement.id === 'luck_time_bonus' && bonusType === BonusType.EXTRA_TIME) {
+          shouldUnlock = true
+        }
+        if (achievement.id === 'luck_slow_enemies' && bonusType === BonusType.SLOW_ENEMIES) {
+          shouldUnlock = true
+        }
+        if (achievement.id === 'luck_size_up' && bonusType === BonusType.SIZE_UP) {
+          shouldUnlock = true
+        }
+        if (achievement.id === 'luck_invisible' && bonusType === BonusType.INVISIBILITY) {
+          shouldUnlock = true
+        }
+      }
+      
+      // Двойной эффект (2 активных бонуса одновременно)
+      if (achievement.id === 'luck_double_bonus' && activeBonuses.length >= 2) {
+        shouldUnlock = true
+      }
+      
+      // Ранняя удача (бонус в первые 10 секунд)
+      if (achievement.id === 'luck_early_bonus' && gameTime && gameTime <= 10 && bonusesCollectedThisGame >= 1) {
         shouldUnlock = true
       }
       
@@ -164,6 +257,17 @@ export function checkSpecialAchievements(survivalTime: number, isFirstGame: bool
     }
   }
   
+  // Проверка улучшения рекорда
+  const currentBest = getBestScore()
+  if (survivalTime > currentBest + 30) {
+    const comeback = achievements.find(a => a.id === 'special_comeback')
+    if (comeback && !comeback.unlocked) {
+      comeback.unlocked = true
+      comeback.unlockedAt = Date.now()
+      newlyUnlocked.push(comeback)
+    }
+  }
+  
   // Количество игр
   const gamesPlayed = getGamesPlayed()
   const gamesAchievements = [
@@ -178,6 +282,63 @@ export function checkSpecialAchievements(survivalTime: number, isFirstGame: bool
     if (gamesPlayed >= count) {
       const achievement = achievements.find(a => a.id === id)
       if (achievement && !achievement.unlocked) {
+        achievement.unlocked = true
+        achievement.unlockedAt = Date.now()
+        newlyUnlocked.push(achievement)
+      }
+    }
+  })
+  
+  if (newlyUnlocked.length > 0) {
+    saveAchievements(achievements)
+  }
+  
+  return newlyUnlocked
+}
+
+// Проверить достижения за выносливость
+export function checkEnduranceAchievements(): Achievement[] {
+  const achievements = getAchievements()
+  const newlyUnlocked: Achievement[] = []
+  const gamesPlayed = getGamesPlayed()
+  const totalTime = getTotalTime()
+  
+  achievements.forEach(achievement => {
+    if (achievement.type === 'endurance' && !achievement.unlocked) {
+      let shouldUnlock = false
+      
+      // Достижения по общему времени
+      if (achievement.id === 'endurance_total_time_30min' && totalTime >= 1800) {
+        shouldUnlock = true
+      }
+      if (achievement.id === 'endurance_total_time_1hour' && totalTime >= 3600) {
+        shouldUnlock = true
+      }
+      if (achievement.id === 'endurance_total_time_2hours' && totalTime >= 7200) {
+        shouldUnlock = true
+      }
+      
+      // Достижения по количеству игр (упрощенные)
+      if (achievement.id === 'endurance_streak_3' && gamesPlayed >= 3) {
+        shouldUnlock = true
+      }
+      if (achievement.id === 'endurance_streak_5' && gamesPlayed >= 5) {
+        shouldUnlock = true
+      }
+      if (achievement.id === 'endurance_streak_10' && gamesPlayed >= 10) {
+        shouldUnlock = true
+      }
+      if (achievement.id === 'endurance_daily_5' && gamesPlayed >= 5) {
+        shouldUnlock = true
+      }
+      if (achievement.id === 'endurance_daily_10' && gamesPlayed >= 10) {
+        shouldUnlock = true
+      }
+      if (achievement.id === 'endurance_weekly_25' && gamesPlayed >= 25) {
+        shouldUnlock = true
+      }
+      
+      if (shouldUnlock) {
         achievement.unlocked = true
         achievement.unlockedAt = Date.now()
         newlyUnlocked.push(achievement)
@@ -214,6 +375,40 @@ export function incrementGamesPlayed(): number {
   return newCount
 }
 
+// Получить общее время в игре
+export function getTotalTime(): number {
+  if (typeof window === 'undefined') return 0
+  
+  try {
+    const saved = localStorage.getItem(TOTAL_TIME_KEY)
+    return saved ? parseInt(saved, 10) : 0
+  } catch (error) {
+    return 0
+  }
+}
+
+// Добавить время к общему времени
+export function addTotalTime(seconds: number): number {
+  if (typeof window === 'undefined') return 0
+  
+  const current = getTotalTime()
+  const newTotal = current + seconds
+  localStorage.setItem(TOTAL_TIME_KEY, newTotal.toString())
+  return newTotal
+}
+
+// Получить лучший результат
+export function getBestScore(): number {
+  if (typeof window === 'undefined') return 0
+  
+  try {
+    const saved = localStorage.getItem(BEST_SCORE_KEY)
+    return saved ? parseInt(saved, 10) : 0
+  } catch (error) {
+    return 0
+  }
+}
+
 // Получить прогресс достижений
 export function getAchievementProgress(): AchievementProgress {
   const achievements = getAchievements()
@@ -232,4 +427,6 @@ export function resetAchievements(): void {
   
   localStorage.removeItem(STORAGE_KEY)
   localStorage.removeItem(GAMES_PLAYED_KEY)
+  localStorage.removeItem(TOTAL_TIME_KEY)
+  localStorage.removeItem(BONUSES_COLLECTED_KEY)
 }

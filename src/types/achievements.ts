@@ -185,9 +185,33 @@ export const ACHIEVEMENTS: Omit<Achievement, 'unlocked' | 'unlockedAt'>[] = [
   {
     id: 'enemy_16',
     title: 'Мастер всех опасностей',
-    description: 'Встретьте всех 16 врагов',
+    description: 'Встретьте всех 25 врагов',
     icon: '👑',
-    requirement: 16,
+    requirement: 25,
+    type: 'enemy'
+  },
+  {
+    id: 'enemy_18',
+    title: 'Почти все враги',
+    description: 'Встретьте 18 разных врагов',
+    icon: '🎯',
+    requirement: 18,
+    type: 'enemy'
+  },
+  {
+    id: 'enemy_20',
+    title: 'Двадцатка врагов',
+    description: 'Встретьте 20 разных врагов',
+    icon: '🏆',
+    requirement: 20,
+    type: 'enemy'
+  },
+  {
+    id: 'enemy_22',
+    title: 'Почти все угрозы',
+    description: 'Встретьте 22 разных врага',
+    icon: '⭐',
+    requirement: 22,
     type: 'enemy'
   },
   {
@@ -211,6 +235,30 @@ export const ACHIEVEMENTS: Omit<Achievement, 'unlocked' | 'unlockedAt'>[] = [
     title: 'Звездная встреча',
     description: 'Встретьте звезду-генератор',
     icon: '⭐',
+    requirement: 1,
+    type: 'enemy'
+  },
+  {
+    id: 'enemy_triangle',
+    title: 'Треугольная угроза',
+    description: 'Встретьте вращающийся треугольник',
+    icon: '🔺',
+    requirement: 1,
+    type: 'enemy'
+  },
+  {
+    id: 'enemy_lightning',
+    title: 'Молниеносная встреча',
+    description: 'Встретьте телепортирующуюся молнию',
+    icon: '⚡',
+    requirement: 1,
+    type: 'enemy'
+  },
+  {
+    id: 'enemy_fire',
+    title: 'Огненная опасность',
+    description: 'Встретьте огненный шар',
+    icon: '🔥',
     requirement: 1,
     type: 'enemy'
   },
