@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useEffect, useState, useCallback } from 'react'
-import { GameState, GameConfig, Position, BonusType, ActiveBonus, MutatedEnemy } from '@/types/game'
+import { GameState, GameConfig, Position, BonusType, ActiveBonus, MutatedEnemy, Boss, CannonBall } from '@/types/game'
 
 // Функция для безопасного получения размеров окна
 const getWindowDimensions = () => {
@@ -45,6 +45,9 @@ import {
   spawnCrystalController,
   spawnPhantomDuplicator,
   spawnContaminationZone,
+  spawnBoss,
+  shouldSpawnBoss,
+  createCannonBall,
 } from '@/lib/gameLogic'
 
 import { GameEntity } from '@/types/game';
@@ -144,6 +147,14 @@ export function GameCanvas({ gameState, onGameOver, onScoreUpdate, onEncountered
     sizeUpDuration: 15000,
     invisibilityDuration: 7000,
     extraTimeAmount: 10,
+    // Параметры для боссов
+    bossSize: 60,
+    bossHealth: 5,
+    bossAttackInterval: 3000,
+    // Параметры для пушки
+    cannonDuration: 30000,
+    cannonBallSpeed: 8,
+    cannonBallDamage: 1,
     crystalControllerSize: 24,
     crystalControllerSpawnTime: 110000,
     phantomDuplicatorSize: 18,
@@ -325,6 +336,38 @@ export function GameCanvas({ gameState, onGameOver, onScoreUpdate, onEncountered
     setLocalGameState(newState)
   }, [])
 
+  // Обработка клика мыши для стрельбы из пушки
+  const handleMouseClick = useCallback((event: MouseEvent) => {
+    if (!canvasRef.current || !gameStateRef.current?.isPlaying) return
+
+    // Проверяем, есть ли активная пушка
+    const hasCannon = gameStateRef.current.activeBonuses.some(b => b.type === BonusType.CANNON)
+    if (!hasCannon) return
+
+    const canvas = canvasRef.current
+    const rect = canvas.getBoundingClientRect()
+    const scaleX = canvas.width / rect.width
+    const scaleY = canvas.height / rect.height
+    
+    const clickX = (event.clientX - rect.left) * scaleX
+    const clickY = (event.clientY - rect.top) * scaleY
+
+    // Создаем снаряд пушки
+    const cannonBall = createCannonBall(
+      gameStateRef.current.player.position,
+      { x: clickX, y: clickY },
+      gameConfig
+    )
+
+    const newState = {
+      ...gameStateRef.current,
+      entities: [...gameStateRef.current.entities, cannonBall]
+    }
+    
+    gameStateRef.current = newState
+    setLocalGameState(newState)
+  }, [gameConfig])
+
   // Обработка касаний для мобильных устройств
   const handleTouchMove = useCallback((event: TouchEvent) => {
     if (!canvasRef.current || !gameStateRef.current?.isPlaying) return
@@ -423,6 +466,14 @@ export function GameCanvas({ gameState, onGameOver, onScoreUpdate, onEncountered
       sizeUpDuration: 15000,
       invisibilityDuration: 7000,
       extraTimeAmount: 10,
+      // Параметры для боссов
+      bossSize: 60,
+      bossHealth: 5,
+      bossAttackInterval: 3000,
+      // Параметры для пушки
+      cannonDuration: 30000,
+      cannonBallSpeed: 8,
+      cannonBallDamage: 1,
     }
     const currentConfigWithNewEnemies = {
       ...baseConfig,
@@ -562,6 +613,12 @@ export function GameCanvas({ gameState, onGameOver, onScoreUpdate, onEncountered
       lastContaminationZoneSpawnRef.current = currentTime
     }
 
+    // Спавним боссов каждую минуту
+    const bossMinute = shouldSpawnBoss(elapsedTime, newState)
+    if (bossMinute) {
+      newState = spawnBoss(newState, currentConfig, bossMinute)
+    }
+
 
     // Проверяем, нужно ли стрелять из звездочек
     const starsToShoot = newState.entities.filter(entity => 
@@ -595,6 +652,14 @@ export function GameCanvas({ gameState, onGameOver, onScoreUpdate, onEncountered
       const bonusTypes = Object.values(BonusType)
       const randomBonusType = bonusTypes[Math.floor(Math.random() * bonusTypes.length)]
       onBonusCollected(randomBonusType)
+    }
+    
+    // Проверяем, были ли побеждены боссы
+    if (newState.defeatedBossesThisUpdate && newState.defeatedBossesThisUpdate > 0) {
+      // Здесь можно добавить обработку побежденных боссов
+      // Например, показать уведомление или проверить достижения
+      console.log(`Побеждено боссов: ${newState.defeatedBossesThisUpdate}`)
+      delete newState.defeatedBossesThisUpdate // Очищаем флаг
     }
 
     // Проверяем коллизии
@@ -979,6 +1044,69 @@ export function GameCanvas({ gameState, onGameOver, onScoreUpdate, onEncountered
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
         ctx.fillText('⚠️', entity.position.x, entity.position.y);
+      } else if (entity.type === 'boss') {
+        // Рисуем босса
+        const bossEntity = entity as import('@/types/game').Boss;
+        
+        // Рисуем полосу здоровья
+        const healthBarWidth = entity.size.width;
+        const healthBarHeight = 6;
+        const healthPercent = bossEntity.health / bossEntity.maxHealth;
+        
+        // Фон полосы здоровья
+        ctx.fillStyle = '#374151';
+        ctx.fillRect(
+          entity.position.x - healthBarWidth / 2,
+          entity.position.y - entity.size.height / 2 - 15,
+          healthBarWidth,
+          healthBarHeight
+        );
+        
+        // Полоса здоровья
+        ctx.fillStyle = healthPercent > 0.5 ? '#10b981' : healthPercent > 0.25 ? '#f59e0b' : '#ef4444';
+        ctx.fillRect(
+          entity.position.x - healthBarWidth / 2,
+          entity.position.y - entity.size.height / 2 - 15,
+          healthBarWidth * healthPercent,
+          healthBarHeight
+        );
+        
+        // Рисуем тело босса с пульсацией
+        const currentTime = Date.now();
+        const pulseScale = 1 + 0.1 * Math.sin(currentTime / 300);
+        const size = entity.size.width * pulseScale;
+        
+        ctx.save();
+        ctx.fillStyle = entity.color;
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.arc(entity.position.x, entity.position.y, size / 2, 0, 2 * Math.PI);
+        ctx.fill();
+        ctx.stroke();
+        
+        // Рисуем корону для босса
+        ctx.fillStyle = '#fbbf24';
+        ctx.font = `bold ${Math.max(16, size / 4)}px sans-serif`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('👑', entity.position.x, entity.position.y);
+        ctx.restore();
+      } else if (entity.type === 'cannon-ball') {
+        // Рисуем снаряд пушки
+        ctx.fillStyle = entity.color;
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.arc(
+          entity.position.x,
+          entity.position.y,
+          entity.size.width / 2,
+          0,
+          2 * Math.PI
+        );
+        ctx.fill();
+        ctx.stroke();
       }
     })
 
@@ -997,13 +1125,15 @@ export function GameCanvas({ gameState, onGameOver, onScoreUpdate, onEncountered
     if (!canvas) return
 
     canvas.addEventListener('mousemove', handleMouseMove)
+    canvas.addEventListener('click', handleMouseClick)
     canvas.addEventListener('touchmove', handleTouchMove, { passive: false })
 
     return () => {
       canvas.removeEventListener('mousemove', handleMouseMove)
+      canvas.removeEventListener('click', handleMouseClick)
       canvas.removeEventListener('touchmove', handleTouchMove)
     }
-  }, [handleMouseMove, handleTouchMove])
+  }, [handleMouseMove, handleMouseClick, handleTouchMove])
 
   // Эффект для игрового цикла
   useEffect(() => {

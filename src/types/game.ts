@@ -211,13 +211,34 @@ export interface MutatedEnemy extends GameObject {
   aggressiveness: number // Уровень агрессивности (1-3)
 }
 
+// Интерфейс для босса
+export interface Boss extends GameObject {
+  type: 'boss'
+  bossType: 'minute-1' | 'minute-2' | 'minute-3' | 'minute-4' | 'minute-5'
+  health: number
+  maxHealth: number
+  spawnTime: number
+  lastAttack: number
+  attackInterval: number
+  phase: number // Фаза босса (1-3)
+}
+
+// Интерфейс для снаряда пушки
+export interface CannonBall extends GameObject {
+  type: 'cannon-ball'
+  velocity: Position
+  speed: number
+  damage: number
+}
+
 // Типы бонусов
 export enum BonusType {
   SHIELD = 'shield',
   SLOW_ENEMIES = 'slow-enemies',
   SIZE_UP = 'size-up',
   INVISIBILITY = 'invisibility',
-  EXTRA_TIME = 'extra-time'
+  EXTRA_TIME = 'extra-time',
+  CANNON = 'cannon'
 }
 
 export interface Bonus extends GameObject {
@@ -242,13 +263,14 @@ export interface GameState {
   encounteredEnemies: string[]
   activeBonuses: ActiveBonus[]
   killerEnemy?: GameEntity | null
+  defeatedBossesThisUpdate?: number
 }
 
 export type GameEntity = Player | ChaserSquare | BouncingCircle | StarGenerator | PurpleProjectile |
   TriangleSpinner | PentagonSpiral | Lightning | FireBall | DiagonalHunter |
   Mine | LaserBeam | TeleportCube | Spinner | GhostBall | SnakeSegment |
   PulsatingSphere | PatrolSquare | ReflectingProjectile | Bonus | CrystalController |
-  PhantomDuplicator | ContaminationZone | HazardZone | MutatedEnemy
+  PhantomDuplicator | ContaminationZone | HazardZone | MutatedEnemy | Boss | CannonBall
 
 
 export interface GameConfig {
@@ -315,4 +337,12 @@ export interface GameConfig {
   phantomDuplicatorSpawnTime: number
   contaminationZoneSize: number
   contaminationZoneSpawnTime: number
+  // Параметры для боссов
+  bossSize: number
+  bossHealth: number
+  bossAttackInterval: number
+  // Параметры для пушки
+  cannonDuration: number
+  cannonBallSpeed: number
+  cannonBallDamage: number
 }

@@ -1,7 +1,7 @@
 import { GameState, GameConfig, Position, ChaserSquare, BouncingCircle, StarGenerator, PurpleProjectile, GameEntity,
   TriangleSpinner, PentagonSpiral, Lightning, FireBall, DiagonalHunter, Mine, LaserBeam, TeleportCube,
   Spinner, GhostBall, SnakeSegment, PulsatingSphere, PatrolSquare, ReflectingProjectile,
-  Bonus, BonusType, ActiveBonus, CrystalController, PhantomDuplicator, ContaminationZone, HazardZone, MutatedEnemy } from '@/types/game'
+  Bonus, BonusType, ActiveBonus, CrystalController, PhantomDuplicator, ContaminationZone, HazardZone, MutatedEnemy, Boss, CannonBall } from '@/types/game'
 
 export const defaultGameConfig: GameConfig = {
   gameWidth: 1200,
@@ -68,6 +68,14 @@ export const defaultGameConfig: GameConfig = {
   phantomDuplicatorSpawnTime: 120000,
   contaminationZoneSize: 30,
   contaminationZoneSpawnTime: 130000,
+  // Параметры для боссов
+  bossSize: 60,
+  bossHealth: 5,
+  bossAttackInterval: 3000,
+  // Параметры для пушки
+  cannonDuration: 30000, // 30 секунд
+  cannonBallSpeed: 8,
+  cannonBallDamage: 1,
 }
 
 export function createInitialGameState(config: GameConfig): GameState {
@@ -1268,6 +1276,16 @@ export function updateGameEntities(gameState: GameState, config: GameConfig): Ga
         const updatedMutated = updateMutatedEnemy(entity as MutatedEnemy, newGameState.player.position);
         updatedEntities.push(updatedMutated);
         break;
+      case 'boss':
+        const updatedBoss = updateBoss(entity as Boss, newGameState.player.position, newGameState.gameArea);
+        updatedEntities.push(updatedBoss);
+        break;
+      case 'cannon-ball':
+        const updatedCannonBall = updateCannonBall(entity as CannonBall, newGameState.gameArea);
+        if (updatedCannonBall) {
+          updatedEntities.push(updatedCannonBall);
+        }
+        break;
       default:
         updatedEntities.push(entity)
     }
@@ -1283,6 +1301,28 @@ export function updateGameEntities(gameState: GameState, config: GameConfig): Ga
   const [mutatedEntities, updatedEncounteredEnemies] = checkEnemyMutations(updatedEntities, newGameState);
   updatedEntities = mutatedEntities;
   newGameState.encounteredEnemies = updatedEncounteredEnemies;
+
+  // Проверяем попадания снарядов пушки
+  const cannonBalls = updatedEntities.filter(e => e.type === 'cannon-ball') as CannonBall[];
+  let totalBossesDefeated = 0;
+  for (const cannonBall of cannonBalls) {
+    const [entitiesAfterHit, hitSomething, bossDefeated] = checkCannonBallHit(cannonBall, updatedEntities);
+    if (bossDefeated) {
+      totalBossesDefeated++;
+    }
+    if (hitSomething) {
+      // Удаляем снаряд после попадания
+      updatedEntities = entitiesAfterHit.filter(e => e.id !== cannonBall.id);
+    } else {
+      updatedEntities = entitiesAfterHit;
+    }
+  }
+  
+  // Обновляем счетчик побежденных боссов
+  if (totalBossesDefeated > 0) {
+    // Это будет обработано в GameCanvas через колбэк
+    newGameState.defeatedBossesThisUpdate = totalBossesDefeated;
+  }
 
   // Проверяем столкновения между сущностями
   for (let i = 0; i < updatedEntities.length; i++) {
@@ -1625,18 +1665,25 @@ export function updateSnakeSegment(segment: SnakeSegment, playerPosition: Positi
 // === ЛОГИКА БОНУСОВ ===
 
 export function spawnBonus(gameState: GameState, config: GameConfig): GameState {
-  const bonusTypes = Object.values(BonusType);
+  // Проверяем, нужна ли пушка (если есть босс)
+  const needsCannon = shouldSpawnCannon(gameState)
   
-  // Увеличиваем шанс появления щита
-  const weightedBonusTypes = [
-    BonusType.SHIELD, BonusType.SHIELD, BonusType.SHIELD, // Щит появляется в 3 раза чаще
-    BonusType.SLOW_ENEMIES,
-    BonusType.SIZE_UP,
-    BonusType.INVISIBILITY,
-    BonusType.EXTRA_TIME
-  ];
+  let bonusType: BonusType
   
-  const bonusType = weightedBonusTypes[Math.floor(Math.random() * weightedBonusTypes.length)];
+  if (needsCannon && Math.random() < 0.7) { // 70% шанс пушки если есть босс
+    bonusType = BonusType.CANNON
+  } else {
+    // Увеличиваем шанс появления щита
+    const weightedBonusTypes = [
+      BonusType.SHIELD, BonusType.SHIELD, BonusType.SHIELD, // Щит появляется в 3 раза чаще
+      BonusType.SLOW_ENEMIES,
+      BonusType.SIZE_UP,
+      BonusType.INVISIBILITY,
+      BonusType.EXTRA_TIME
+    ];
+    
+    bonusType = weightedBonusTypes[Math.floor(Math.random() * weightedBonusTypes.length)];
+  }
 
   const x = Math.random() * (config.gameWidth - config.bonusSize) + config.bonusSize / 2;
   const y = Math.random() * (config.gameHeight - config.bonusSize) + config.bonusSize / 2;
@@ -1647,7 +1694,7 @@ export function spawnBonus(gameState: GameState, config: GameConfig): GameState 
     bonusType,
     position: { x, y },
     size: { width: config.bonusSize, height: config.bonusSize },
-    color: '#FFD700', // Gold
+    color: bonusType === BonusType.CANNON ? '#f59e0b' : '#FFD700', // Оранжевый для пушки, золотой для остальных
   };
 
   return {
@@ -1697,6 +1744,8 @@ function getBonusDuration(bonusType: BonusType, config: GameConfig): number {
       return config.sizeUpDuration;
     case BonusType.INVISIBILITY:
       return config.invisibilityDuration;
+    case BonusType.CANNON:
+      return config.cannonDuration;
     default:
       return 0;
   }
@@ -1990,4 +2039,202 @@ export function updateMutatedEnemy(enemy: MutatedEnemy, playerPosition: Position
     ...enemy,
     position: newPosition
   }
+}
+
+// === СИСТЕМА БОССОВ ===
+
+// Функция создания босса
+export function spawnBoss(gameState: GameState, config: GameConfig, minute: number): GameState {
+  const bossTypes: Boss['bossType'][] = ['minute-1', 'minute-2', 'minute-3', 'minute-4', 'minute-5']
+  const bossType = bossTypes[Math.min(minute - 1, 4)] // Максимум 5 типов боссов
+  
+  const x = config.gameWidth / 2
+  const y = config.gameHeight / 2
+  
+  const boss: Boss = {
+    id: `boss-${minute}-${Date.now()}`,
+    type: 'boss',
+    bossType,
+    position: { x, y },
+    size: { width: config.bossSize, height: config.bossSize },
+    color: getBossColor(bossType),
+    health: config.bossHealth,
+    maxHealth: config.bossHealth,
+    spawnTime: Date.now(),
+    lastAttack: Date.now(),
+    attackInterval: config.bossAttackInterval,
+    phase: 1
+  }
+  
+  const newEncounteredEnemies = gameState.encounteredEnemies.includes('boss')
+    ? gameState.encounteredEnemies
+    : [...gameState.encounteredEnemies, 'boss']
+  
+  return {
+    ...gameState,
+    entities: [...gameState.entities, boss],
+    encounteredEnemies: newEncounteredEnemies
+  }
+}
+
+// Функция получения цвета босса
+function getBossColor(bossType: Boss['bossType']): string {
+  switch (bossType) {
+    case 'minute-1': return '#8b5cf6' // фиолетовый
+    case 'minute-2': return '#ef4444' // красный
+    case 'minute-3': return '#f59e0b' // оранжевый
+    case 'minute-4': return '#10b981' // зеленый
+    case 'minute-5': return '#3b82f6' // синий
+    default: return '#6b7280' // серый
+  }
+}
+
+// Функция обновления босса
+export function updateBoss(boss: Boss, playerPosition: Position, gameArea: { width: number, height: number }): Boss {
+  const currentTime = Date.now()
+  
+  // Движение босса (медленное преследование игрока)
+  const dx = playerPosition.x - boss.position.x
+  const dy = playerPosition.y - boss.position.y
+  const distance = Math.sqrt(dx * dx + dy * dy)
+  
+  let newPosition = { ...boss.position }
+  if (distance > 10) {
+    const speed = 0.5 + (boss.phase - 1) * 0.2 // Скорость увеличивается с фазой
+    const normalizedDx = (dx / distance) * speed
+    const normalizedDy = (dy / distance) * speed
+    newPosition = {
+      x: Math.max(boss.size.width / 2, Math.min(gameArea.width - boss.size.width / 2, boss.position.x + normalizedDx)),
+      y: Math.max(boss.size.height / 2, Math.min(gameArea.height - boss.size.height / 2, boss.position.y + normalizedDy))
+    }
+  }
+  
+  // Определение фазы босса по здоровью
+  const healthPercent = boss.health / boss.maxHealth
+  let newPhase = 1
+  if (healthPercent <= 0.33) newPhase = 3
+  else if (healthPercent <= 0.66) newPhase = 2
+  
+  return {
+    ...boss,
+    position: newPosition,
+    phase: newPhase,
+    lastAttack: currentTime
+  }
+}
+
+// Функция создания снаряда пушки
+export function createCannonBall(startPosition: Position, targetPosition: Position, config: GameConfig): CannonBall {
+  const dx = targetPosition.x - startPosition.x
+  const dy = targetPosition.y - startPosition.y
+  const distance = Math.sqrt(dx * dx + dy * dy)
+  
+  const velocity = {
+    x: (dx / distance) * config.cannonBallSpeed,
+    y: (dy / distance) * config.cannonBallSpeed
+  }
+  
+  return {
+    id: `cannon-ball-${Date.now()}`,
+    type: 'cannon-ball',
+    position: { ...startPosition },
+    size: { width: 8, height: 8 },
+    color: '#fbbf24', // желтый
+    velocity,
+    speed: config.cannonBallSpeed,
+    damage: config.cannonBallDamage
+  }
+}
+
+// Функция обновления снаряда пушки
+export function updateCannonBall(cannonBall: CannonBall, gameArea: { width: number, height: number }): CannonBall | null {
+  const newPosition = {
+    x: cannonBall.position.x + cannonBall.velocity.x,
+    y: cannonBall.position.y + cannonBall.velocity.y
+  }
+  
+  // Удаляем снаряд если он вышел за границы
+  if (newPosition.x < 0 || newPosition.x > gameArea.width || 
+      newPosition.y < 0 || newPosition.y > gameArea.height) {
+    return null
+  }
+  
+  return {
+    ...cannonBall,
+    position: newPosition
+  }
+}
+
+// Функция проверки попадания снаряда в врага
+export function checkCannonBallHit(cannonBall: CannonBall, entities: GameEntity[]): [GameEntity[], boolean, boolean] {
+  const updatedEntities: GameEntity[] = []
+  let hitSomething = false
+  let bossDefeated = false
+  
+  entities.forEach(entity => {
+    if (entity.id === cannonBall.id) {
+      return // Пропускаем сам снаряд
+    }
+    
+    // Проверяем попадание в врагов (кроме игрока, бонусов и зон опасности)
+    if (entity.type !== 'player' && entity.type !== 'bonus' && entity.type !== 'hazard-zone') {
+      const dx = cannonBall.position.x - entity.position.x
+      const dy = cannonBall.position.y - entity.position.y
+      const distance = Math.sqrt(dx * dx + dy * dy)
+      
+      if (distance < (cannonBall.size.width / 2 + entity.size.width / 2)) {
+        hitSomething = true
+        
+        // Если это босс, уменьшаем здоровье
+        if (entity.type === 'boss') {
+          const boss = entity as Boss
+          const newHealth = boss.health - cannonBall.damage
+          
+          if (newHealth <= 0) {
+            // Босс побежден, не добавляем его в список
+            bossDefeated = true
+            return
+          } else {
+            // Обновляем здоровье босса
+            updatedEntities.push({
+              ...boss,
+              health: newHealth
+            })
+            return
+          }
+        } else {
+          // Обычный враг уничтожается с одного попадания
+          return
+        }
+      }
+    }
+    
+    updatedEntities.push(entity)
+  })
+  
+  return [updatedEntities, hitSomething, bossDefeated]
+}
+
+// Функция спавна пушки (бонуса)
+export function shouldSpawnCannon(gameState: GameState): boolean {
+  // Спавним пушку если есть босс на поле
+  return gameState.entities.some(entity => entity.type === 'boss')
+}
+
+// Функция проверки необходимости спавна босса
+export function shouldSpawnBoss(elapsedTime: number, gameState: GameState): number | null {
+  const minutes = Math.floor(elapsedTime / 60000) // Переводим в минуты
+  
+  // Проверяем, нужно ли спавнить босса для текущей минуты
+  if (minutes >= 1 && minutes <= 5) {
+    const bossAlreadyExists = gameState.entities.some(entity => 
+      entity.type === 'boss' && (entity as Boss).bossType === `minute-${minutes}` as Boss['bossType']
+    )
+    
+    if (!bossAlreadyExists) {
+      return minutes
+    }
+  }
+  
+  return null
 }

@@ -190,6 +190,9 @@ export function checkBonusAchievements(
         if (achievement.id === 'luck_invisible' && bonusType === BonusType.INVISIBILITY) {
           shouldUnlock = true
         }
+        if (achievement.id === 'luck_cannon_user' && bonusType === BonusType.CANNON) {
+          shouldUnlock = true
+        }
       }
       
       // Двойной эффект (2 активных бонуса одновременно)
@@ -411,6 +414,60 @@ export function getBestScore(): number {
   } catch (error) {
     return 0
   }
+}
+
+// Получить количество побежденных боссов
+export function getDefeatedBosses(): number {
+  if (typeof window === 'undefined') return 0
+  
+  try {
+    const saved = localStorage.getItem('dodgeGame-defeatedBosses')
+    return saved ? parseInt(saved, 10) : 0
+  } catch (error) {
+    return 0
+  }
+}
+
+// Увеличить счетчик побежденных боссов
+export function incrementDefeatedBosses(): number {
+  if (typeof window === 'undefined') return 0
+  
+  const current = getDefeatedBosses()
+  const newCount = current + 1
+  localStorage.setItem('dodgeGame-defeatedBosses', newCount.toString())
+  return newCount
+}
+
+// Проверить достижения за боссов
+export function checkBossAchievements(): Achievement[] {
+  const achievements = getAchievements()
+  const newlyUnlocked: Achievement[] = []
+  const defeatedBosses = getDefeatedBosses()
+  
+  achievements.forEach(achievement => {
+    if (achievement.type === 'special' && !achievement.unlocked) {
+      let shouldUnlock = false
+      
+      if (achievement.id === 'special_boss_killer' && defeatedBosses >= 1) {
+        shouldUnlock = true
+      }
+      if (achievement.id === 'special_boss_master' && defeatedBosses >= 3) {
+        shouldUnlock = true
+      }
+      
+      if (shouldUnlock) {
+        achievement.unlocked = true
+        achievement.unlockedAt = Date.now()
+        newlyUnlocked.push(achievement)
+      }
+    }
+  })
+  
+  if (newlyUnlocked.length > 0) {
+    saveAchievements(achievements)
+  }
+  
+  return newlyUnlocked
 }
 
 // Получить прогресс достижений

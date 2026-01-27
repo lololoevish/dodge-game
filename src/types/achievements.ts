@@ -613,5 +613,29 @@ export const ACHIEVEMENTS: Omit<Achievement, 'unlocked' | 'unlockedAt'>[] = [
     icon: '🍀',
     requirement: 1,
     type: 'luck'
+  },
+  {
+    id: 'luck_cannon_user',
+    title: 'Артиллерист',
+    description: 'Используйте пушку',
+    icon: '🔫',
+    requirement: 1,
+    type: 'luck'
+  },
+  {
+    id: 'special_boss_killer',
+    title: 'Убийца боссов',
+    description: 'Победите первого босса',
+    icon: '⚔️',
+    requirement: 1,
+    type: 'special'
+  },
+  {
+    id: 'special_boss_master',
+    title: 'Мастер боссов',
+    description: 'Победите 3 боссов',
+    icon: '👑',
+    requirement: 3,
+    type: 'special'
   }
 ]

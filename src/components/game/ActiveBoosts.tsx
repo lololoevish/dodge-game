@@ -50,6 +50,14 @@ const getBonusInfo = (bonusType: BonusType) => {
         bgColor: "bg-orange-500/20",
         borderColor: "border-orange-500/50"
       }
+    case BonusType.CANNON:
+      return {
+        icon: ArrowUp, // Используем ArrowUp как иконку пушки
+        name: "Пушка",
+        color: "text-amber-500",
+        bgColor: "bg-amber-500/20",
+        borderColor: "border-amber-500/50"
+      }
     default:
       return {
         icon: Shield,
