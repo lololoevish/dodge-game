@@ -70,8 +70,8 @@ export function ActiveBoosts({ activeBonuses, isMobile = false }: ActiveBoostsPr
   if (activeBonuses.length === 0) return null
 
   return (
-    <div className={`fixed z-10 ${isMobile ? 'bottom-12 left-2 right-2' : 'bottom-4 left-4'}`}>
-      <div className="flex flex-wrap gap-2">
+    <div className={`fixed z-10 ${isMobile ? 'bottom-16 left-2 right-2' : 'bottom-6 left-6'}`}>
+      <div className="flex flex-wrap gap-3">
         {activeBonuses.map((bonus) => {
           const bonusInfo = getBonusInfo(bonus.type)
           const Icon = bonusInfo.icon
@@ -81,19 +81,22 @@ export function ActiveBoosts({ activeBonuses, isMobile = false }: ActiveBoostsPr
             <div
               key={bonus.id}
               className={`
-                flex items-center gap-2 px-3 py-2 rounded-lg border backdrop-blur-sm
+                flex items-center gap-3 px-4 py-3 rounded-2xl border-2 backdrop-blur-md shadow-lg
                 ${bonusInfo.bgColor} ${bonusInfo.borderColor}
                 ${isMobile ? 'text-xs' : 'text-sm'}
-                animate-pulse
+                animate-pulse hover:scale-105 transition-all duration-300
+                bg-gradient-to-r from-background/80 to-background/60
               `}
             >
-              <Icon className={`${isMobile ? 'h-3 w-3' : 'h-4 w-4'} ${bonusInfo.color}`} />
-              <span className={`font-medium ${bonusInfo.color}`}>
+              <Icon className={`${isMobile ? 'h-4 w-4' : 'h-5 w-5'} ${bonusInfo.color} animate-bounce`} />
+              <span className={`font-bold ${bonusInfo.color}`}>
                 {bonusInfo.name}
               </span>
-              <span className={`${bonusInfo.color} opacity-80`}>
-                {timeLeft}
-              </span>
+              <div className={`px-2 py-1 rounded-full bg-background/50 border border-border/30`}>
+                <span className={`${bonusInfo.color} font-mono font-bold text-xs`}>
+                  {timeLeft}
+                </span>
+              </div>
             </div>
           )
         })}

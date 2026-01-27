@@ -48,31 +48,31 @@ export default function AchievementsPage() {
 
   const AchievementCard = ({ achievement }: { achievement: Achievement }) => (
     <div
-      className={`border rounded-lg p-4 transition-all ${
+      className={`border-2 rounded-2xl p-6 transition-all duration-500 hover:scale-105 group ${
         achievement.unlocked
-          ? 'bg-gradient-to-br from-amber-500/10 to-orange-500/10 border-amber-500/50'
-          : 'bg-muted/30 border-border opacity-60'
+          ? 'bg-gradient-to-br from-amber-500/10 to-orange-500/10 border-amber-500/50 hover:border-amber-500/70 hover:shadow-xl hover:shadow-amber-500/20'
+          : 'bg-muted/30 border-border opacity-60 hover:opacity-80 hover:border-border/80'
       }`}
     >
-      <div className="flex items-start gap-4">
-        <div className={`text-4xl ${achievement.unlocked ? 'animate-bounce' : 'grayscale'}`}>
-          {achievement.unlocked ? achievement.icon : <Lock className="h-8 w-8 text-muted-foreground" />}
+      <div className="flex items-start gap-5">
+        <div className={`text-5xl transition-all duration-300 ${achievement.unlocked ? 'animate-bounce group-hover:scale-110' : 'grayscale group-hover:grayscale-0'}`}>
+          {achievement.unlocked ? achievement.icon : <Lock className="h-10 w-10 text-muted-foreground" />}
         </div>
         <div className="flex-1">
-          <h3 className={`font-bold text-lg mb-1 ${achievement.unlocked ? 'text-foreground' : 'text-muted-foreground'}`}>
+          <h3 className={`font-bold text-xl mb-2 transition-colors duration-300 ${achievement.unlocked ? 'text-foreground group-hover:text-amber-600' : 'text-muted-foreground'}`}>
             {achievement.title}
           </h3>
-          <p className="text-sm text-muted-foreground mb-2">
+          <p className="text-base text-muted-foreground mb-3 leading-relaxed">
             {achievement.description}
           </p>
           {achievement.unlocked && achievement.unlockedAt && (
-            <p className="text-xs text-amber-600 dark:text-amber-400">
+            <p className="text-sm text-amber-600 dark:text-amber-400 font-medium">
               🎉 Разблокировано: {formatDate(achievement.unlockedAt)}
             </p>
           )}
           {!achievement.unlocked && (
-            <p className="text-xs text-muted-foreground">
-              🔒 Заблокировано
+            <p className="text-sm text-muted-foreground flex items-center gap-2">
+              🔒 <span>Заблокировано</span>
             </p>
           )}
         </div>
@@ -81,15 +81,21 @@ export default function AchievementsPage() {
   )
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background to-muted p-4">
+    <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20 p-4 relative overflow-hidden">
+      {/* Анимированный фон */}
+      <div className="absolute inset-0 overflow-hidden">
+        <div className="absolute -top-40 -right-40 w-80 h-80 bg-gradient-to-br from-amber-500/10 to-orange-500/10 rounded-full blur-3xl animate-pulse"></div>
+        <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-gradient-to-br from-purple-500/10 to-pink-500/10 rounded-full blur-3xl animate-pulse delay-1000"></div>
+      </div>
+
       {/* Хедер */}
-      <div className="max-w-4xl mx-auto mb-8">
-        <div className="flex items-center justify-between mb-6">
+      <div className="max-w-6xl mx-auto mb-8 relative z-10">
+        <div className="flex items-center justify-between mb-8">
           <Button
             variant="ghost"
             size="sm"
             onClick={() => router.push("/")}
-            className="flex items-center gap-2"
+            className="flex items-center gap-2 hover:scale-105 transition-transform duration-300"
           >
             <ArrowLeft className="h-4 w-4" />
             Главное меню

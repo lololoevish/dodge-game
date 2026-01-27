@@ -174,16 +174,23 @@ export default function GamePage() {
   }
 
   return (
-    <div className={`min-h-screen bg-background flex flex-col relative ${platformMode === 'mobile' ? 'touch-none select-none' : ''}`}>
+    <div className={`min-h-screen bg-gradient-to-br from-background via-background to-muted/10 flex flex-col relative overflow-hidden ${platformMode === 'mobile' ? 'touch-none select-none' : ''}`}>
+      {/* Анимированный фон */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute -top-40 -right-40 w-80 h-80 bg-gradient-to-br from-blue-500/5 to-purple-500/5 rounded-full blur-3xl animate-pulse"></div>
+        <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-gradient-to-br from-green-500/5 to-blue-500/5 rounded-full blur-3xl animate-pulse delay-1000"></div>
+        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-gradient-to-br from-purple-500/3 to-pink-500/3 rounded-full blur-3xl animate-pulse delay-500"></div>
+      </div>
+
       {/* Хедер игры - разный для разных платформ */}
-      <div className={`absolute top-0 left-0 right-0 z-20 flex items-center justify-between ${platformMode === 'mobile' ? 'p-2' : 'p-4'} bg-background/90 backdrop-blur-sm border-b border-border`}>
+      <div className={`absolute top-0 left-0 right-0 z-20 flex items-center justify-between ${platformMode === 'mobile' ? 'p-2' : 'p-4'} bg-gradient-to-r from-background/95 via-background/90 to-background/95 backdrop-blur-md border-b-2 border-gradient-to-r from-border/50 via-border to-border/50 shadow-lg`}>
         <Button
           variant="ghost"
           size="sm"
           onClick={handleMainMenu}
-          className={`flex items-center gap-2 ${platformMode === 'mobile' ? 'text-xs' : 'text-sm'}`}
+          className={`flex items-center gap-2 hover:bg-blue-500/10 hover:text-blue-500 transition-all duration-300 hover:scale-105 ${platformMode === 'mobile' ? 'text-xs' : 'text-sm'}`}
         >
-          <ArrowLeft className={`${platformMode === 'mobile' ? 'h-3 w-3' : 'h-4 w-4'}`} />
+          <ArrowLeft className={`${platformMode === 'mobile' ? 'h-3 w-3' : 'h-4 w-4'} animate-pulse`} />
           {platformMode === 'mobile' ? "Меню" : "Главное меню"}
         </Button>
         
@@ -192,26 +199,26 @@ export default function GamePage() {
             variant="ghost"
             size="sm"
             onClick={handleTogglePause}
-            className={`flex items-center gap-2 ${platformMode === 'mobile' ? 'text-xs' : 'text-sm'}`}
+            className={`flex items-center gap-2 hover:bg-amber-500/10 hover:text-amber-500 transition-all duration-300 hover:scale-105 ${platformMode === 'mobile' ? 'text-xs' : 'text-sm'}`}
             disabled={gameState === "gameOver"}
           >
             {gameState === "paused" ? (
               <>
-                <Play className={`${platformMode === 'mobile' ? 'h-3 w-3' : 'h-4 w-4'}`} />
+                <Play className={`${platformMode === 'mobile' ? 'h-3 w-3' : 'h-4 w-4'} animate-bounce`} />
                 {platformMode === 'mobile' ? "▶️" : "Продолжить"}
               </>
             ) : (
               <>
-                <Pause className={`${platformMode === 'mobile' ? 'h-3 w-3' : 'h-4 w-4'}`} />
+                <Pause className={`${platformMode === 'mobile' ? 'h-3 w-3' : 'h-4 w-4'} animate-pulse`} />
                 {platformMode === 'mobile' ? "⏸️" : "Пауза"}
               </>
             )}
           </Button>
-          <div className={`${platformMode === 'mobile' ? 'text-sm' : 'text-lg'} font-bold`}>
+          <div className={`${platformMode === 'mobile' ? 'text-sm' : 'text-lg'} font-black bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent animate-pulse`}>
             {platformMode === 'mobile' ? formatTime(score).replace(" сек", "с") : `Время: ${formatTime(score)}`}
           </div>
           {platformMode === 'desktop' && (
-            <div className="text-sm text-muted-foreground">
+            <div className="text-sm text-muted-foreground bg-muted/50 px-3 py-1 rounded-full border border-border/50">
               Рекорд: {formatTime(bestScore)}
             </div>
           )}
@@ -224,22 +231,31 @@ export default function GamePage() {
         <>
           {/* Экран паузы - разный для разных платформ */}
           {gameState === "paused" && (
-            <div className="absolute inset-0 z-30 bg-background/90 backdrop-blur-sm flex items-center justify-center p-4">
-              <div className={`text-center space-y-6 bg-card border border-border rounded-lg p-8 shadow-2xl ${platformMode === 'mobile' ? 'max-w-sm w-full' : 'max-w-md'}`}>
-                <div className={`${platformMode === 'mobile' ? 'text-4xl' : 'text-6xl'}`}>⏸️</div>
-                <h2 className={`${platformMode === 'mobile' ? 'text-xl' : 'text-3xl'} font-bold`}>Игра на паузе</h2>
-                <div className={`space-y-2 text-muted-foreground ${platformMode === 'mobile' ? 'text-sm' : 'text-base'}`}>
+            <div className="absolute inset-0 z-30 bg-gradient-to-br from-background/95 via-background/90 to-background/95 backdrop-blur-lg flex items-center justify-center p-4">
+              <div className={`text-center space-y-8 bg-gradient-to-br from-card/90 to-card/70 border-2 border-border/50 rounded-3xl p-10 shadow-2xl backdrop-blur-sm hover:border-border transition-all duration-500 ${platformMode === 'mobile' ? 'max-w-sm w-full' : 'max-w-md'}`}>
+                <div className={`${platformMode === 'mobile' ? 'text-6xl' : 'text-8xl'} animate-bounce`}>⏸️</div>
+                <h2 className={`${platformMode === 'mobile' ? 'text-2xl' : 'text-4xl'} font-black bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent`}>Игра на паузе</h2>
+                <div className={`space-y-3 text-muted-foreground ${platformMode === 'mobile' ? 'text-sm' : 'text-base'}`}>
                   {platformMode === 'desktop' && (
-                    <p>Нажмите <kbd className="px-2 py-1 bg-muted rounded text-xs">Пробел</kbd> или кнопку "Продолжить"</p>
+                    <p className="flex items-center justify-center gap-2">
+                      Нажмите <kbd className="px-3 py-2 bg-gradient-to-br from-muted to-muted/70 rounded-lg text-xs font-bold border border-border/50 shadow-sm">Пробел</kbd> или кнопку "Продолжить"
+                    </p>
                   )}
-                  <p>чтобы возобновить игру</p>
+                  <p className="text-lg">чтобы возобновить игру</p>
                 </div>
                 <div className={`flex gap-4 justify-center ${platformMode === 'mobile' ? 'flex-col' : 'flex-row'}`}>
-                  <Button onClick={handleTogglePause} className={`flex items-center gap-2 ${platformMode === 'mobile' ? 'w-full' : 'w-auto'}`}>
-                    <Play className="h-4 w-4" />
+                  <Button 
+                    onClick={handleTogglePause} 
+                    className={`flex items-center gap-2 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 shadow-lg hover:shadow-green-500/30 transition-all duration-300 hover:scale-105 ${platformMode === 'mobile' ? 'w-full h-12' : 'w-auto h-12'}`}
+                  >
+                    <Play className="h-5 w-5 animate-pulse" />
                     Продолжить
                   </Button>
-                  <Button variant="outline" onClick={handleMainMenu} className={`${platformMode === 'mobile' ? 'w-full' : 'w-auto'}`}>
+                  <Button 
+                    variant="outline" 
+                    onClick={handleMainMenu} 
+                    className={`border-2 hover:bg-blue-500/10 hover:border-blue-500/50 transition-all duration-300 hover:scale-105 ${platformMode === 'mobile' ? 'w-full h-12' : 'w-auto h-12'}`}
+                  >
                     <ArrowLeft className="h-4 w-4 mr-2" />
                     Главное меню
                   </Button>
@@ -274,14 +290,14 @@ export default function GamePage() {
 
           {/* Мобильная панель внизу - только для мобильного режима */}
           {platformMode === 'mobile' && (
-            <div className="absolute bottom-0 left-0 right-0 z-20 bg-background/90 backdrop-blur-sm border-t border-border p-2">
+            <div className="absolute bottom-0 left-0 right-0 z-20 bg-gradient-to-r from-background/95 via-background/90 to-background/95 backdrop-blur-md border-t-2 border-gradient-to-r from-border/50 via-border to-border/50 p-3 shadow-lg">
               <div className="flex items-center justify-between text-xs">
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 bg-muted/50 px-3 py-2 rounded-full border border-border/50">
                   <div className="text-muted-foreground">Рекорд:</div>
-                  <div className="font-bold">{formatTime(bestScore).replace(" сек", "с")}</div>
+                  <div className="font-bold text-amber-500">{formatTime(bestScore).replace(" сек", "с")}</div>
                 </div>
-                <div className="text-center">
-                  <div className="text-muted-foreground">Касайтесь экрана для управления</div>
+                <div className="text-center px-3 py-2 bg-blue-500/10 rounded-full border border-blue-500/20">
+                  <div className="text-blue-500 font-medium">Касайтесь экрана для управления</div>
                 </div>
                 <ThemeToggle />
               </div>
