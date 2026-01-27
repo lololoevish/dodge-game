@@ -1131,7 +1131,7 @@ export function updateGameEntities(gameState: GameState, config: GameConfig): Ga
 
   // Обновляем размер игрока, если активен бонус SizeUp
   if (isSizeUpActive && newGameState.player.size.width === config.playerSize) {
-    newGameState.player.size = { width: config.playerSize * 1.5, height: config.playerSize * 1.5 };
+    newGameState.player.size = { width: config.playerSize * 2, height: config.playerSize * 2 };
   } else if (!isSizeUpActive && newGameState.player.size.width !== config.playerSize) {
     newGameState.player.size = { width: config.playerSize, height: config.playerSize };
   }
@@ -1617,7 +1617,17 @@ export function updateSnakeSegment(segment: SnakeSegment, playerPosition: Positi
 
 export function spawnBonus(gameState: GameState, config: GameConfig): GameState {
   const bonusTypes = Object.values(BonusType);
-  const bonusType = bonusTypes[Math.floor(Math.random() * bonusTypes.length)];
+  
+  // Увеличиваем шанс появления щита
+  const weightedBonusTypes = [
+    BonusType.SHIELD, BonusType.SHIELD, BonusType.SHIELD, // Щит появляется в 3 раза чаще
+    BonusType.SLOW_ENEMIES,
+    BonusType.SIZE_UP,
+    BonusType.INVISIBILITY,
+    BonusType.EXTRA_TIME
+  ];
+  
+  const bonusType = weightedBonusTypes[Math.floor(Math.random() * weightedBonusTypes.length)];
 
   const x = Math.random() * (config.gameWidth - config.bonusSize) + config.bonusSize / 2;
   const y = Math.random() * (config.gameHeight - config.bonusSize) + config.bonusSize / 2;

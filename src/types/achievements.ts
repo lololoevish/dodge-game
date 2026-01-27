@@ -529,7 +529,7 @@ export const ACHIEVEMENTS: Omit<Achievement, 'unlocked' | 'unlockedAt'>[] = [
   {
     id: 'luck_size_up',
     title: 'Увеличение',
-    description: 'Увеличьте размер игрока',
+    description: 'Увеличьте размер игрока в 2 раза (осторожно - это дебаф!)',
     icon: '🔍',
     requirement: 1,
     type: 'luck'
