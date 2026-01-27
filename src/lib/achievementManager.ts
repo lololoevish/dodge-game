@@ -98,6 +98,7 @@ export function checkEnemyAchievements(encounteredEnemies: string[]): Achievemen
           !achievement.id.includes('triangle') &&
           !achievement.id.includes('lightning') &&
           !achievement.id.includes('fire') &&
+          !achievement.id.includes('mutated') &&
           achievement.id !== 'enemy_first') {
         shouldUnlock = enemyCount >= achievement.requirement
       }
@@ -124,6 +125,9 @@ export function checkEnemyAchievements(encounteredEnemies: string[]): Achievemen
         shouldUnlock = true
       }
       if (achievement.id === 'enemy_fire' && encounteredEnemies.includes('fire')) {
+        shouldUnlock = true
+      }
+      if (achievement.id === 'enemy_mutated' && encounteredEnemies.includes('mutated-enemy')) {
         shouldUnlock = true
       }
       

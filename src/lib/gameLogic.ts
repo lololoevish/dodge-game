@@ -1,7 +1,7 @@
 import { GameState, GameConfig, Position, ChaserSquare, BouncingCircle, StarGenerator, PurpleProjectile, GameEntity,
   TriangleSpinner, PentagonSpiral, Lightning, FireBall, DiagonalHunter, Mine, LaserBeam, TeleportCube,
   Spinner, GhostBall, SnakeSegment, PulsatingSphere, PatrolSquare, ReflectingProjectile,
-  Bonus, BonusType, ActiveBonus, CrystalController, PhantomDuplicator, ContaminationZone, HazardZone } from '@/types/game'
+  Bonus, BonusType, ActiveBonus, CrystalController, PhantomDuplicator, ContaminationZone, HazardZone, MutatedEnemy } from '@/types/game'
 
 export const defaultGameConfig: GameConfig = {
   gameWidth: 1200,
@@ -1264,6 +1264,10 @@ export function updateGameEntities(gameState: GameState, config: GameConfig): Ga
       case 'bonus':
         updatedEntities.push(entity); // Бонусы не двигаются
         break;
+      case 'mutated-enemy':
+        const updatedMutated = updateMutatedEnemy(entity as MutatedEnemy, newGameState.player.position);
+        updatedEntities.push(updatedMutated);
+        break;
       default:
         updatedEntities.push(entity)
     }
@@ -1274,6 +1278,11 @@ export function updateGameEntities(gameState: GameState, config: GameConfig): Ga
 
   // Удаляем просроченные зоны опасности
   updatedEntities = updateHazardZones(updatedEntities);
+
+  // Проверяем мутации врагов в зонах опасности
+  const [mutatedEntities, updatedEncounteredEnemies] = checkEnemyMutations(updatedEntities, newGameState);
+  updatedEntities = mutatedEntities;
+  newGameState.encounteredEnemies = updatedEncounteredEnemies;
 
   // Проверяем столкновения между сущностями
   for (let i = 0; i < updatedEntities.length; i++) {
@@ -1894,4 +1903,91 @@ export function updateHazardZones(entities: GameEntity[]): GameEntity[] {
     }
     return true
   })
+}
+
+// Функция создания мутированного врага
+export function createMutatedEnemy(originalEnemy: GameEntity): MutatedEnemy {
+  const aggressiveness = Math.floor(Math.random() * 3) + 1 // 1-3 уровень агрессивности
+  
+  return {
+    id: `mutated-${originalEnemy.id}`,
+    type: 'mutated-enemy',
+    originalType: originalEnemy.type,
+    position: { ...originalEnemy.position },
+    size: { 
+      width: originalEnemy.size.width * (1 + aggressiveness * 0.2), // Увеличиваем размер
+      height: originalEnemy.size.height * (1 + aggressiveness * 0.2)
+    },
+    color: aggressiveness === 1 ? '#ff6b6b' : aggressiveness === 2 ? '#ff4757' : '#ff3838', // Красные оттенки
+    mutationTime: Date.now(),
+    speed: 1.5 + aggressiveness * 0.5, // Увеличиваем скорость
+    aggressiveness
+  }
+}
+
+// Функция проверки мутации врагов в зонах опасности
+export function checkEnemyMutations(entities: GameEntity[], gameState: GameState): [GameEntity[], string[]] {
+  const hazardZones = entities.filter(e => e.type === 'hazard-zone') as HazardZone[]
+  const mutatedEntities: GameEntity[] = []
+  let newEncounteredEnemies = [...gameState.encounteredEnemies]
+  
+  entities.forEach(entity => {
+    // Пропускаем игрока, бонусы, зоны опасности и уже мутированных врагов
+    if (entity.type === 'player' || entity.type === 'bonus' || 
+        entity.type === 'hazard-zone' || entity.type === 'mutated-enemy') {
+      mutatedEntities.push(entity)
+      return
+    }
+    
+    // Проверяем, находится ли враг в зоне опасности
+    let shouldMutate = false
+    for (const hazardZone of hazardZones) {
+      const dx = entity.position.x - hazardZone.position.x
+      const dy = entity.position.y - hazardZone.position.y
+      const distance = Math.sqrt(dx * dx + dy * dy)
+      
+      if (distance < hazardZone.size.width / 2) {
+        shouldMutate = true
+        break
+      }
+    }
+    
+    if (shouldMutate) {
+      // Создаем мутированного врага
+      const mutatedEnemy = createMutatedEnemy(entity)
+      mutatedEntities.push(mutatedEnemy)
+      
+      // Добавляем мутированного врага в список встреченных
+      if (!newEncounteredEnemies.includes('mutated-enemy')) {
+        newEncounteredEnemies.push('mutated-enemy')
+      }
+    } else {
+      mutatedEntities.push(entity)
+    }
+  })
+  
+  return [mutatedEntities, newEncounteredEnemies]
+}
+
+// Функция обновления мутированного врага
+export function updateMutatedEnemy(enemy: MutatedEnemy, playerPosition: Position): MutatedEnemy {
+  // Агрессивное движение к игроку
+  const dx = playerPosition.x - enemy.position.x
+  const dy = playerPosition.y - enemy.position.y
+  const distance = Math.sqrt(dx * dx + dy * dy)
+  
+  let newPosition = { ...enemy.position }
+  if (distance > 5) {
+    const normalizedDx = (dx / distance) * enemy.speed
+    const normalizedDy = (dy / distance) * enemy.speed
+    newPosition = {
+      x: enemy.position.x + normalizedDx,
+      y: enemy.position.y + normalizedDy
+    }
+  }
+  
+  return {
+    ...enemy,
+    position: newPosition
+  }
 }

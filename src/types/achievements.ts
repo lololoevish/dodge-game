@@ -262,6 +262,14 @@ export const ACHIEVEMENTS: Omit<Achievement, 'unlocked' | 'unlockedAt'>[] = [
     requirement: 1,
     type: 'enemy'
   },
+  {
+    id: 'enemy_mutated',
+    title: 'Радиоактивная мутация',
+    description: 'Встретьте мутированного врага',
+    icon: '⚠️',
+    requirement: 1,
+    type: 'enemy'
+  },
   
   // Специальные достижения (12 достижений)
   {

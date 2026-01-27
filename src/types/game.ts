@@ -202,6 +202,15 @@ export interface HazardZone extends GameObject {
   expirationTime: number
 }
 
+// Интерфейс для мутированного врага
+export interface MutatedEnemy extends GameObject {
+  type: 'mutated-enemy'
+  originalType: string
+  mutationTime: number
+  speed: number
+  aggressiveness: number // Уровень агрессивности (1-3)
+}
+
 // Типы бонусов
 export enum BonusType {
   SHIELD = 'shield',
@@ -239,7 +248,7 @@ export type GameEntity = Player | ChaserSquare | BouncingCircle | StarGenerator 
   TriangleSpinner | PentagonSpiral | Lightning | FireBall | DiagonalHunter |
   Mine | LaserBeam | TeleportCube | Spinner | GhostBall | SnakeSegment |
   PulsatingSphere | PatrolSquare | ReflectingProjectile | Bonus | CrystalController |
-  PhantomDuplicator | ContaminationZone | HazardZone
+  PhantomDuplicator | ContaminationZone | HazardZone | MutatedEnemy
 
 
 export interface GameConfig {

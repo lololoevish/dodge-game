@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useEffect, useState, useCallback } from 'react'
-import { GameState, GameConfig, Position, BonusType, ActiveBonus } from '@/types/game'
+import { GameState, GameConfig, Position, BonusType, ActiveBonus, MutatedEnemy } from '@/types/game'
 
 // Функция для безопасного получения размеров окна
 const getWindowDimensions = () => {
@@ -940,6 +940,45 @@ export function GameCanvas({ gameState, onGameOver, onScoreUpdate, onEncountered
           entity.size.height
         );
         ctx.globalAlpha = 1;
+      } else if (entity.type === 'mutated-enemy') {
+        // Рисуем мутированного врага
+        const mutatedEntity = entity as import('@/types/game').MutatedEnemy;
+        
+        // Рисуем пульсирующее свечение
+        const currentTime = Date.now();
+        const pulseAlpha = 0.3 + 0.4 * Math.sin(currentTime / 200); // Быстрая пульсация
+        
+        ctx.save();
+        ctx.globalAlpha = pulseAlpha;
+        ctx.beginPath();
+        ctx.arc(entity.position.x, entity.position.y, entity.size.width / 2 + 5, 0, 2 * Math.PI);
+        ctx.fillStyle = entity.color;
+        ctx.shadowColor = entity.color;
+        ctx.shadowBlur = 20;
+        ctx.fill();
+        ctx.restore();
+        
+        // Рисуем основное тело мутированного врага
+        ctx.fillStyle = entity.color;
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(
+          entity.position.x,
+          entity.position.y,
+          entity.size.width / 2,
+          0,
+          2 * Math.PI
+        );
+        ctx.fill();
+        ctx.stroke();
+        
+        // Рисуем символ мутации
+        ctx.fillStyle = 'white';
+        ctx.font = `bold ${Math.max(12, entity.size.width / 3)}px sans-serif`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('⚠️', entity.position.x, entity.position.y);
       }
     })
 
