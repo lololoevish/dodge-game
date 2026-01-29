@@ -95,7 +95,12 @@ export function createInitialGameState(config: GameConfig): GameState {
     gameArea: { width: config.gameWidth, height: config.gameHeight },
     encounteredEnemies: [],
     activeBonuses: [],
-    killerEnemy: null
+    killerEnemy: null,
+    // Система прицеливания и пушки
+    isAiming: false,
+    aimPosition: { x: 0, y: 0 },
+    cannonAmmo: 0,
+    maxCannonAmmo: 20
   }
 }
 
@@ -1664,6 +1669,20 @@ export function updateSnakeSegment(segment: SnakeSegment, playerPosition: Positi
 
 // === ЛОГИКА БОНУСОВ ===
 
+// Функция проверки необходимости пушки
+function shouldSpawnCannon(gameState: GameState): boolean {
+  // Пушка нужна если есть боссы или много врагов
+  const bossCount = gameState.entities.filter(e => e.type === 'boss').length
+  const enemyCount = gameState.entities.filter(e => 
+    e.type !== 'player' && 
+    e.type !== 'bonus' && 
+    e.type !== 'cannon-ball' &&
+    e.type !== 'hazard-zone'
+  ).length
+  
+  return bossCount > 0 || enemyCount > 15
+}
+
 export function spawnBonus(gameState: GameState, config: GameConfig): GameState {
   // Проверяем, нужна ли пушка (если есть босс)
   const needsCannon = shouldSpawnCannon(gameState)
@@ -1707,19 +1726,25 @@ export function applyBonus(gameState: GameState, bonus: Bonus, config: GameConfi
   const now = Date.now();
   let newActiveBonuses = [...gameState.activeBonuses];
   let newScore = gameState.score;
+  let newCannonAmmo = gameState.cannonAmmo;
 
-  const existingBonusIndex = newActiveBonuses.findIndex(ab => ab.type === bonus.bonusType);
-  if (existingBonusIndex !== -1) {
-    // Если бонус уже активен, просто продлеваем его действие
-    newActiveBonuses[existingBonusIndex].endTime += getBonusDuration(bonus.bonusType, config);
+  // Специальная обработка для пушки
+  if (bonus.bonusType === BonusType.CANNON) {
+    newCannonAmmo = gameState.maxCannonAmmo;
   } else {
-    // Иначе добавляем новый активный бонус
-    const activeBonus: ActiveBonus = {
-      id: bonus.id,
-      type: bonus.bonusType,
-      endTime: now + getBonusDuration(bonus.bonusType, config),
-    };
-    newActiveBonuses.push(activeBonus);
+    const existingBonusIndex = newActiveBonuses.findIndex(ab => ab.type === bonus.bonusType);
+    if (existingBonusIndex !== -1) {
+      // Если бонус уже активен, просто продлеваем его действие
+      newActiveBonuses[existingBonusIndex].endTime += getBonusDuration(bonus.bonusType, config);
+    } else {
+      // Иначе добавляем новый активный бонус
+      const activeBonus: ActiveBonus = {
+        id: bonus.id,
+        type: bonus.bonusType,
+        endTime: now + getBonusDuration(bonus.bonusType, config),
+      };
+      newActiveBonuses.push(activeBonus);
+    }
   }
 
   if (bonus.bonusType === BonusType.EXTRA_TIME) {
@@ -1730,6 +1755,7 @@ export function applyBonus(gameState: GameState, bonus: Bonus, config: GameConfi
     ...gameState,
     score: newScore,
     activeBonuses: newActiveBonuses,
+    cannonAmmo: newCannonAmmo,
     entities: gameState.entities.filter(e => e.id !== bonus.id), // Удаляем бонус с поля
   };
 }
@@ -2041,6 +2067,148 @@ export function updateMutatedEnemy(enemy: MutatedEnemy, playerPosition: Position
   }
 }
 
+// === СИСТЕМА ПУШКИ ===
+
+// Функция применения бонуса пушки
+export function applyCannonBonus(gameState: GameState): GameState {
+  return {
+    ...gameState,
+    cannonAmmo: gameState.maxCannonAmmo
+  }
+}
+
+// Функция переключения режима прицеливания
+export function toggleAiming(gameState: GameState): GameState {
+  return {
+    ...gameState,
+    isAiming: !gameState.isAiming
+  }
+}
+
+// Функция обновления позиции прицела
+export function updateAimPosition(gameState: GameState, aimPosition: Position): GameState {
+  return {
+    ...gameState,
+    aimPosition
+  }
+}
+
+// Функция создания дробового выстрела
+export function createShotgunBlast(gameState: GameState, targetPosition: Position): GameState {
+  if (gameState.cannonAmmo <= 0) return gameState
+
+  const playerPos = gameState.player.position
+  const dx = targetPosition.x - playerPos.x
+  const dy = targetPosition.y - playerPos.y
+  const distance = Math.sqrt(dx * dx + dy * dy)
+  
+  if (distance === 0) return gameState
+
+  const normalizedDx = dx / distance
+  const normalizedDy = dy / distance
+  
+  // Создаем 5 снарядов с разным разбросом для дробовика
+  const cannonBalls: CannonBall[] = []
+  const spreadAngles = [-0.3, -0.15, 0, 0.15, 0.3] // Углы разброса в радианах
+  
+  spreadAngles.forEach((angleOffset, index) => {
+    const angle = Math.atan2(normalizedDy, normalizedDx) + angleOffset
+    const velocity = {
+      x: Math.cos(angle) * 8, // Скорость снаряда
+      y: Math.sin(angle) * 8
+    }
+    
+    const cannonBall: CannonBall = {
+      id: `cannon-ball-${Date.now()}-${index}`,
+      type: 'cannon-ball',
+      position: { ...playerPos },
+      size: { width: 6, height: 6 },
+      color: '#fbbf24', // amber-400
+      velocity,
+      speed: 8,
+      damage: 1
+    }
+    
+    cannonBalls.push(cannonBall)
+  })
+
+  return {
+    ...gameState,
+    entities: [...gameState.entities, ...cannonBalls],
+    cannonAmmo: gameState.cannonAmmo - 1
+  }
+}
+
+// Функция обновления снарядов пушки
+export function updateCannonBalls(gameState: GameState): GameState {
+  const updatedEntities = gameState.entities.map(entity => {
+    if (entity.type === 'cannon-ball') {
+      const cannonBall = entity as CannonBall
+      const newPosition = {
+        x: cannonBall.position.x + cannonBall.velocity.x,
+        y: cannonBall.position.y + cannonBall.velocity.y
+      }
+      
+      // Удаляем снаряд если он вышел за границы
+      if (newPosition.x < 0 || newPosition.x > gameState.gameArea.width ||
+          newPosition.y < 0 || newPosition.y > gameState.gameArea.height) {
+        return null
+      }
+      
+      return {
+        ...cannonBall,
+        position: newPosition
+      }
+    }
+    return entity
+  }).filter(entity => entity !== null) as GameEntity[]
+
+  return {
+    ...gameState,
+    entities: updatedEntities
+  }
+}
+
+// Функция проверки попаданий снарядов
+export function checkCannonBallHits(gameState: GameState): GameState {
+  const cannonBalls = gameState.entities.filter(e => e.type === 'cannon-ball') as CannonBall[]
+  const enemies = gameState.entities.filter(e => 
+    e.type !== 'player' && 
+    e.type !== 'bonus' && 
+    e.type !== 'cannon-ball' &&
+    e.type !== 'hazard-zone'
+  )
+  
+  let updatedEntities = [...gameState.entities]
+  const hitCannonBalls: string[] = []
+  const hitEnemies: string[] = []
+  
+  cannonBalls.forEach(cannonBall => {
+    enemies.forEach(enemy => {
+      if (hitCannonBalls.includes(cannonBall.id) || hitEnemies.includes(enemy.id)) return
+      
+      const dx = cannonBall.position.x - enemy.position.x
+      const dy = cannonBall.position.y - enemy.position.y
+      const distance = Math.sqrt(dx * dx + dy * dy)
+      
+      if (distance < (cannonBall.size.width + enemy.size.width) / 2) {
+        hitCannonBalls.push(cannonBall.id)
+        hitEnemies.push(enemy.id)
+      }
+    })
+  })
+  
+  // Удаляем попавшие снаряды и врагов
+  updatedEntities = updatedEntities.filter(entity => 
+    !hitCannonBalls.includes(entity.id) && !hitEnemies.includes(entity.id)
+  )
+  
+  return {
+    ...gameState,
+    entities: updatedEntities
+  }
+}
+
 // === СИСТЕМА БОССОВ ===
 
 // Функция создания босса
@@ -2213,12 +2381,6 @@ export function checkCannonBallHit(cannonBall: CannonBall, entities: GameEntity[
   })
   
   return [updatedEntities, hitSomething, bossDefeated]
-}
-
-// Функция спавна пушки (бонуса)
-export function shouldSpawnCannon(gameState: GameState): boolean {
-  // Спавним пушку если есть босс на поле
-  return gameState.entities.some(entity => entity.type === 'boss')
 }
 
 // Функция проверки необходимости спавна босса

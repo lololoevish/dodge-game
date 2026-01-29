@@ -48,6 +48,11 @@ import {
   spawnBoss,
   shouldSpawnBoss,
   createCannonBall,
+  toggleAiming,
+  updateAimPosition,
+  createShotgunBlast,
+  updateCannonBalls,
+  checkCannonBallHits,
 } from '@/lib/gameLogic'
 
 import { GameEntity } from '@/types/game';
@@ -331,18 +336,30 @@ export function GameCanvas({ gameState, onGameOver, onScoreUpdate, onEncountered
     const mouseX = (event.clientX - rect.left) * scaleX
     const mouseY = (event.clientY - rect.top) * scaleY
 
-    const newState = updatePlayerPosition(gameStateRef.current, { x: mouseX, y: mouseY })
-    gameStateRef.current = newState
-    setLocalGameState(newState)
+    if (gameStateRef.current.isAiming) {
+      // В режиме прицеливания обновляем только позицию прицела
+      const newState = updateAimPosition(gameStateRef.current, { x: mouseX, y: mouseY })
+      gameStateRef.current = newState
+      setLocalGameState(newState)
+    } else {
+      // Обычное движение игрока
+      const newState = updatePlayerPosition(gameStateRef.current, { x: mouseX, y: mouseY })
+      gameStateRef.current = newState
+      setLocalGameState(newState)
+    }
   }, [])
 
-  // Обработка клика мыши для стрельбы из пушки
+  // Обработка правого клика мыши для стрельбы из пушки
   const handleMouseClick = useCallback((event: MouseEvent) => {
     if (!canvasRef.current || !gameStateRef.current?.isPlaying) return
+    
+    // Только правая кнопка мыши для стрельбы
+    if (event.button !== 2) return
+    
+    event.preventDefault()
 
-    // Проверяем, есть ли активная пушка
-    const hasCannon = gameStateRef.current.activeBonuses.some(b => b.type === BonusType.CANNON)
-    if (!hasCannon) return
+    // Проверяем, есть ли патроны
+    if (gameStateRef.current.cannonAmmo <= 0) return
 
     const canvas = canvasRef.current
     const rect = canvas.getBoundingClientRect()
@@ -352,21 +369,25 @@ export function GameCanvas({ gameState, onGameOver, onScoreUpdate, onEncountered
     const clickX = (event.clientX - rect.left) * scaleX
     const clickY = (event.clientY - rect.top) * scaleY
 
-    // Создаем снаряд пушки
-    const cannonBall = createCannonBall(
-      gameStateRef.current.player.position,
-      { x: clickX, y: clickY },
-      gameConfig
-    )
-
-    const newState = {
-      ...gameStateRef.current,
-      entities: [...gameStateRef.current.entities, cannonBall]
-    }
+    // Создаем дробовой выстрел
+    const newState = createShotgunBlast(gameStateRef.current, { x: clickX, y: clickY })
     
     gameStateRef.current = newState
     setLocalGameState(newState)
-  }, [gameConfig])
+  }, [])
+
+  // Обработка нажатий клавиш
+  const handleKeyDown = useCallback((event: KeyboardEvent) => {
+    if (!gameStateRef.current?.isPlaying) return
+    
+    if (event.code === 'Space') {
+      event.preventDefault()
+      // Переключаем режим прицеливания
+      const newState = toggleAiming(gameStateRef.current)
+      gameStateRef.current = newState
+      setLocalGameState(newState)
+    }
+  }, [])
 
   // Обработка касаний для мобильных устройств
   const handleTouchMove = useCallback((event: TouchEvent) => {
@@ -644,6 +665,12 @@ export function GameCanvas({ gameState, onGameOver, onScoreUpdate, onEncountered
     const previousBonusCount = newState.entities.filter(e => e.type === 'bonus').length
     newState = updateGameEntities(newState, currentConfig)
     const currentBonusCount = newState.entities.filter(e => e.type === 'bonus').length
+    
+    // Обновляем снаряды пушки
+    newState = updateCannonBalls(newState)
+    
+    // Проверяем попадания снарядов
+    newState = checkCannonBallHits(newState)
     
     // Если количество бонусов уменьшилось, значит игрок собрал бонус
     if (previousBonusCount > currentBonusCount && onBonusCollected) {
@@ -1110,6 +1137,51 @@ export function GameCanvas({ gameState, onGameOver, onScoreUpdate, onEncountered
       }
     })
 
+    // Рисуем прицел если активен режим прицеливания
+    if (state.isAiming && state.cannonAmmo > 0) {
+      const playerPos = state.player.position
+      const aimPos = state.aimPosition
+      
+      // Рисуем линию прицеливания
+      ctx.strokeStyle = '#ef4444' // red-500
+      ctx.lineWidth = 2
+      ctx.setLineDash([5, 5])
+      ctx.beginPath()
+      ctx.moveTo(playerPos.x, playerPos.y)
+      ctx.lineTo(aimPos.x, aimPos.y)
+      ctx.stroke()
+      ctx.setLineDash([])
+      
+      // Рисуем прицел
+      ctx.strokeStyle = '#ef4444'
+      ctx.lineWidth = 3
+      ctx.beginPath()
+      ctx.arc(aimPos.x, aimPos.y, 20, 0, 2 * Math.PI)
+      ctx.stroke()
+      
+      // Рисуем крестик прицела
+      ctx.beginPath()
+      ctx.moveTo(aimPos.x - 10, aimPos.y)
+      ctx.lineTo(aimPos.x + 10, aimPos.y)
+      ctx.moveTo(aimPos.x, aimPos.y - 10)
+      ctx.lineTo(aimPos.x, aimPos.y + 10)
+      ctx.stroke()
+    }
+    
+    // Рисуем индикатор патронов если есть пушка
+    if (state.cannonAmmo > 0) {
+      ctx.fillStyle = '#f59e0b' // amber-500
+      ctx.font = 'bold 20px sans-serif'
+      ctx.textAlign = 'left'
+      ctx.textBaseline = 'top'
+      ctx.fillText(`Патроны: ${state.cannonAmmo}`, 20, 60)
+      
+      // Рисуем подсказку
+      ctx.fillStyle = '#6b7280' // gray-500
+      ctx.font = '14px sans-serif'
+      ctx.fillText('Пробел - прицеливание, ПКМ - стрельба', 20, 90)
+    }
+
     // Планируем следующий кадр рендеринга
     requestAnimationFrame(render)
   }, [])
@@ -1125,15 +1197,19 @@ export function GameCanvas({ gameState, onGameOver, onScoreUpdate, onEncountered
     if (!canvas) return
 
     canvas.addEventListener('mousemove', handleMouseMove)
-    canvas.addEventListener('click', handleMouseClick)
+    canvas.addEventListener('mousedown', handleMouseClick)
+    canvas.addEventListener('contextmenu', (e) => e.preventDefault()) // Отключаем контекстное меню
     canvas.addEventListener('touchmove', handleTouchMove, { passive: false })
+    window.addEventListener('keydown', handleKeyDown)
 
     return () => {
       canvas.removeEventListener('mousemove', handleMouseMove)
-      canvas.removeEventListener('click', handleMouseClick)
+      canvas.removeEventListener('mousedown', handleMouseClick)
+      canvas.removeEventListener('contextmenu', (e) => e.preventDefault())
       canvas.removeEventListener('touchmove', handleTouchMove)
+      window.removeEventListener('keydown', handleKeyDown)
     }
-  }, [handleMouseMove, handleMouseClick, handleTouchMove])
+  }, [handleMouseMove, handleMouseClick, handleTouchMove, handleKeyDown])
 
   // Эффект для игрового цикла
   useEffect(() => {

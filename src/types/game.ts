@@ -264,6 +264,11 @@ export interface GameState {
   activeBonuses: ActiveBonus[]
   killerEnemy?: GameEntity | null
   defeatedBossesThisUpdate?: number
+  // Система прицеливания и пушки
+  isAiming: boolean
+  aimPosition: Position
+  cannonAmmo: number
+  maxCannonAmmo: number
 }
 
 export type GameEntity = Player | ChaserSquare | BouncingCircle | StarGenerator | PurpleProjectile |
