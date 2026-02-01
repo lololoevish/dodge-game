@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useEffect, useState, useCallback } from 'react'
-import { GameState, GameConfig, Position, BonusType, ActiveBonus, MutatedEnemy, Boss, CannonBall } from '@/types/game'
+import { GameState, GameConfig, Position, BonusType, ActiveBonus, MutatedEnemy, Boss, CannonBall, GameEntity, StarGenerator } from '@/types/game'
 
 // Функция для безопасного получения размеров окна
 const getWindowDimensions = () => {
@@ -54,8 +54,6 @@ import {
   updateCannonBalls,
   checkCannonBallHits,
 } from '@/lib/gameLogic'
-
-import { GameEntity } from '@/types/game';
 
 interface GameCanvasProps {
   gameState: "playing" | "paused" | "gameOver"
@@ -167,8 +165,8 @@ export function GameCanvas({ gameState, onGameOver, onScoreUpdate, onEncountered
     contaminationZoneSize: 30,
     contaminationZoneSpawnTime: 130000,
   }))
-  
-  const [localGameState, setLocalGameState] = useState<GameState>(() => 
+
+  const [localGameState, setLocalGameState] = useState<GameState>(() =>
     createInitialGameState(gameConfig)
   )
 
@@ -177,8 +175,8 @@ export function GameCanvas({ gameState, onGameOver, onScoreUpdate, onEncountered
     if (typeof window !== 'undefined') {
       const handleResize = () => {
         const newDimensions = getWindowDimensions();
-        
-        setGameConfig(prevConfig => {
+
+        setGameConfig((prevConfig: GameConfig) => {
           if (prevConfig.gameWidth !== newDimensions.width || prevConfig.gameHeight !== newDimensions.height) {
             return {
               ...prevConfig,
@@ -188,9 +186,9 @@ export function GameCanvas({ gameState, onGameOver, onScoreUpdate, onEncountered
           }
           return prevConfig
         })
-        
+
         setWindowSize(newDimensions);
-        
+
         if (gameStateRef.current) {
           gameStateRef.current = {
             ...gameStateRef.current,
@@ -281,8 +279,16 @@ export function GameCanvas({ gameState, onGameOver, onScoreUpdate, onEncountered
       phantomDuplicatorSpawnTime: 120000,
       contaminationZoneSize: 30,
       contaminationZoneSpawnTime: 130000,
+      // Параметры для боссов
+      bossSize: 60,
+      bossHealth: 5,
+      bossAttackInterval: 3000,
+      // Параметры для пушки
+      cannonDuration: 30000,
+      cannonBallSpeed: 8,
+      cannonBallDamage: 1,
     }
-    
+
     const initialState = createInitialGameState(currentConfigWithNewEnemies as GameConfig)
     const newState = {
       ...initialState,
@@ -317,7 +323,7 @@ export function GameCanvas({ gameState, onGameOver, onScoreUpdate, onEncountered
     if (animationFrameRef.current) {
       cancelAnimationFrame(animationFrameRef.current)
     }
-    setLocalGameState(prev => ({
+    setLocalGameState((prev: GameState) => ({
       ...prev,
       isPlaying: false,
       isGameOver: true
@@ -332,7 +338,7 @@ export function GameCanvas({ gameState, onGameOver, onScoreUpdate, onEncountered
     const rect = canvas.getBoundingClientRect()
     const scaleX = canvas.width / rect.width
     const scaleY = canvas.height / rect.height
-    
+
     const mouseX = (event.clientX - rect.left) * scaleX
     const mouseY = (event.clientY - rect.top) * scaleY
 
@@ -349,13 +355,13 @@ export function GameCanvas({ gameState, onGameOver, onScoreUpdate, onEncountered
     }
   }, [])
 
-  // Обработка правого клика мыши для стрельбы из пушки
+  // Обработка левого клика мыши для стрельбы из пушки
   const handleMouseClick = useCallback((event: MouseEvent) => {
     if (!canvasRef.current || !gameStateRef.current?.isPlaying) return
-    
-    // Только правая кнопка мыши для стрельбы
-    if (event.button !== 2) return
-    
+
+    // Только левая кнопка мыши для стрельбы
+    if (event.button !== 0) return
+
     event.preventDefault()
 
     // Проверяем, есть ли патроны
@@ -365,13 +371,13 @@ export function GameCanvas({ gameState, onGameOver, onScoreUpdate, onEncountered
     const rect = canvas.getBoundingClientRect()
     const scaleX = canvas.width / rect.width
     const scaleY = canvas.height / rect.height
-    
+
     const clickX = (event.clientX - rect.left) * scaleX
     const clickY = (event.clientY - rect.top) * scaleY
 
     // Создаем дробовой выстрел
     const newState = createShotgunBlast(gameStateRef.current, { x: clickX, y: clickY })
-    
+
     gameStateRef.current = newState
     setLocalGameState(newState)
   }, [])
@@ -379,8 +385,8 @@ export function GameCanvas({ gameState, onGameOver, onScoreUpdate, onEncountered
   // Обработка нажатий клавиш
   const handleKeyDown = useCallback((event: KeyboardEvent) => {
     if (!gameStateRef.current?.isPlaying) return
-    
-    if (event.code === 'Space') {
+
+    if (event.code === 'KeyR') {
       event.preventDefault()
       // Переключаем режим прицеливания
       const newState = toggleAiming(gameStateRef.current)
@@ -392,7 +398,7 @@ export function GameCanvas({ gameState, onGameOver, onScoreUpdate, onEncountered
   // Обработка касаний для мобильных устройств
   const handleTouchMove = useCallback((event: TouchEvent) => {
     if (!canvasRef.current || !gameStateRef.current?.isPlaying) return
-    
+
     event.preventDefault()
     const touch = event.touches[0]
     if (!touch) return
@@ -401,7 +407,7 @@ export function GameCanvas({ gameState, onGameOver, onScoreUpdate, onEncountered
     const rect = canvas.getBoundingClientRect()
     const scaleX = canvas.width / rect.width
     const scaleY = canvas.height / rect.height
-    
+
     const touchX = (touch.clientX - rect.left) * scaleX
     const touchY = (touch.clientY - rect.top) * scaleY
 
@@ -517,119 +523,119 @@ export function GameCanvas({ gameState, onGameOver, onScoreUpdate, onEncountered
     } as GameConfig
 
     // Спавним чейзера через 10 секунд
-    if (elapsedTime >= currentConfig.chaserSpawnTime && 
-        currentTime - lastChaserSpawnRef.current >= currentConfig.chaserSpawnTime) {
+    if (elapsedTime >= currentConfig.chaserSpawnTime &&
+      currentTime - lastChaserSpawnRef.current >= currentConfig.chaserSpawnTime) {
       newState = spawnChaser(newState, currentConfig)
       lastChaserSpawnRef.current = currentTime
     }
 
     // Спавним отскакивающий круг через 30 секунд
-    if (elapsedTime >= currentConfig.circleSpawnTime && 
-        currentTime - lastCircleSpawnRef.current >= currentConfig.circleSpawnTime) {
+    if (elapsedTime >= currentConfig.circleSpawnTime &&
+      currentTime - lastCircleSpawnRef.current >= currentConfig.circleSpawnTime) {
       newState = spawnBouncingCircle(newState, currentConfig)
       lastCircleSpawnRef.current = currentTime
     }
 
     // Спавним звездочку через 40 секунд
-    if (elapsedTime >= currentConfig.starSpawnTime && 
-        currentTime - lastStarSpawnRef.current >= currentConfig.starSpawnTime) {
+    if (elapsedTime >= currentConfig.starSpawnTime &&
+      currentTime - lastStarSpawnRef.current >= currentConfig.starSpawnTime) {
       newState = spawnStarGenerator(newState, currentConfig)
       lastStarSpawnRef.current = currentTime
     }
 
     // === СПАВН НОВЫХ ФИГУР ===
-    
+
     // Спавним треугольник через 15 секунд
-    if (elapsedTime >= currentConfig.triangleSpawnTime && 
-        currentTime - lastTriangleSpawnRef.current >= currentConfig.triangleSpawnTime) {
+    if (elapsedTime >= currentConfig.triangleSpawnTime &&
+      currentTime - lastTriangleSpawnRef.current >= currentConfig.triangleSpawnTime) {
       newState = spawnTriangle(newState, currentConfig)
       lastTriangleSpawnRef.current = currentTime
     }
 
     // Спавним пентагон через 25 секунд
-    if (elapsedTime >= currentConfig.pentagonSpawnTime && 
-        currentTime - lastPentagonSpawnRef.current >= currentConfig.pentagonSpawnTime) {
+    if (elapsedTime >= currentConfig.pentagonSpawnTime &&
+      currentTime - lastPentagonSpawnRef.current >= currentConfig.pentagonSpawnTime) {
       newState = spawnPentagon(newState, currentConfig)
       lastPentagonSpawnRef.current = currentTime
     }
 
     // Спавним молнию через 35 секунд
-    if (elapsedTime >= currentConfig.lightningSpawnTime && 
-        currentTime - lastLightningSpawnRef.current >= currentConfig.lightningSpawnTime) {
+    if (elapsedTime >= currentConfig.lightningSpawnTime &&
+      currentTime - lastLightningSpawnRef.current >= currentConfig.lightningSpawnTime) {
       newState = spawnLightning(newState, currentConfig)
       lastLightningSpawnRef.current = currentTime
     }
 
     // Спавним огненные шары каждые 20 секунд
-    if (elapsedTime >= currentConfig.fireSpawnTime && 
-        currentTime - lastFireSpawnRef.current >= currentConfig.fireSpawnTime) {
+    if (elapsedTime >= currentConfig.fireSpawnTime &&
+      currentTime - lastFireSpawnRef.current >= currentConfig.fireSpawnTime) {
       newState = spawnFireBall(newState, currentConfig)
       lastFireSpawnRef.current = currentTime
     }
 
     // Спавним диагонального охотника через 60 секунд
-    if (elapsedTime >= currentConfig.diagonalSpawnTime && 
-        currentTime - lastDiagonalSpawnRef.current >= currentConfig.diagonalSpawnTime) {
+    if (elapsedTime >= currentConfig.diagonalSpawnTime &&
+      currentTime - lastDiagonalSpawnRef.current >= currentConfig.diagonalSpawnTime) {
       newState = spawnDiagonalHunter(newState, currentConfig)
       lastDiagonalSpawnRef.current = currentTime
     }
 
     // Спавним лазер через 70 секунд
-    if (elapsedTime >= currentConfig.laserSpawnTime && 
-        currentTime - lastLaserSpawnRef.current >= currentConfig.laserSpawnTime) {
+    if (elapsedTime >= currentConfig.laserSpawnTime &&
+      currentTime - lastLaserSpawnRef.current >= currentConfig.laserSpawnTime) {
       newState = spawnLaser(newState, currentConfig)
       lastLaserSpawnRef.current = currentTime
     }
 
     // Спавним телепортирующийся куб через 80 секунд
     if (elapsedTime >= currentConfig.teleportCubeSpawnTime &&
-        currentTime - lastTeleportCubeSpawnRef.current >= currentConfig.teleportCubeSpawnTime) {
+      currentTime - lastTeleportCubeSpawnRef.current >= currentConfig.teleportCubeSpawnTime) {
       newState = spawnTeleportCube(newState, currentConfig)
       lastTeleportCubeSpawnRef.current = currentTime
     }
 
     // Спавним спиннер через 90 секунд
     if (elapsedTime >= currentConfig.spinnerSpawnTime &&
-        currentTime - lastSpinnerSpawnRef.current >= currentConfig.spinnerSpawnTime) {
+      currentTime - lastSpinnerSpawnRef.current >= currentConfig.spinnerSpawnTime) {
       newState = spawnSpinner(newState, currentConfig)
       lastSpinnerSpawnRef.current = currentTime
     }
 
     // Спавним призрачный шар через 100 секунд
     if (elapsedTime >= currentConfig.ghostBallSpawnTime &&
-        currentTime - lastGhostBallSpawnRef.current >= currentConfig.ghostBallSpawnTime) {
+      currentTime - lastGhostBallSpawnRef.current >= currentConfig.ghostBallSpawnTime) {
       newState = spawnGhostBall(newState, currentConfig)
       lastGhostBallSpawnRef.current = currentTime
     }
 
     // Спавним змейку из 5 сегментов через 110 секунд
     if (elapsedTime >= currentConfig.snakeSegmentSpawnTime &&
-        currentTime - lastSnakeSegmentSpawnRef.current >= currentConfig.snakeSegmentSpawnTime) {
+      currentTime - lastSnakeSegmentSpawnRef.current >= currentConfig.snakeSegmentSpawnTime) {
       newState = spawnSnake(newState, currentConfig)
       lastSnakeSegmentSpawnRef.current = currentTime
     }
 
     // Спавним бонусы
     if (currentTime - lastBonusSpawnRef.current >= currentConfig.bonusSpawnTime) {
-        newState = spawnBonus(newState, currentConfig);
-        lastBonusSpawnRef.current = currentTime;
+      newState = spawnBonus(newState, currentConfig);
+      lastBonusSpawnRef.current = currentTime;
     }
 
     // Спавним новых врагов
     if (elapsedTime >= currentConfig.crystalControllerSpawnTime &&
-        currentTime - lastCrystalControllerSpawnRef.current >= currentConfig.crystalControllerSpawnTime) {
+      currentTime - lastCrystalControllerSpawnRef.current >= currentConfig.crystalControllerSpawnTime) {
       newState = spawnCrystalController(newState, currentConfig)
       lastCrystalControllerSpawnRef.current = currentTime
     }
 
     if (elapsedTime >= currentConfig.phantomDuplicatorSpawnTime &&
-        currentTime - lastPhantomDuplicatorSpawnRef.current >= currentConfig.phantomDuplicatorSpawnTime) {
+      currentTime - lastPhantomDuplicatorSpawnRef.current >= currentConfig.phantomDuplicatorSpawnTime) {
       newState = spawnPhantomDuplicator(newState, currentConfig)
       lastPhantomDuplicatorSpawnRef.current = currentTime
     }
 
     if (elapsedTime >= currentConfig.contaminationZoneSpawnTime &&
-        currentTime - lastContaminationZoneSpawnRef.current >= currentConfig.contaminationZoneSpawnTime) {
+      currentTime - lastContaminationZoneSpawnRef.current >= currentConfig.contaminationZoneSpawnTime) {
       newState = spawnContaminationZone(newState, currentConfig)
       lastContaminationZoneSpawnRef.current = currentTime
     }
@@ -642,19 +648,19 @@ export function GameCanvas({ gameState, onGameOver, onScoreUpdate, onEncountered
 
 
     // Проверяем, нужно ли стрелять из звездочек
-    const starsToShoot = newState.entities.filter(entity => 
-      entity.type === 'star' && 
+    const starsToShoot = newState.entities.filter((entity: GameEntity) =>
+      entity.type === 'star' &&
       currentTime - entity.lastShot >= entity.shootInterval
     )
 
-    starsToShoot.forEach(star => {
+    starsToShoot.forEach((star: GameEntity) => {
       if (star.type === 'star') {
         const projectiles = createProjectilesFromStar(star, newState.player.position, currentConfig)
         newState.entities.push(...projectiles)
-        
+
         // Обновляем время последнего выстрела
         const updatedStar = { ...star, lastShot: currentTime }
-        const starIndex = newState.entities.findIndex(e => e.id === star.id)
+        const starIndex = newState.entities.findIndex((e: GameEntity) => e.id === star.id)
         if (starIndex !== -1) {
           newState.entities[starIndex] = updatedStar
         }
@@ -662,16 +668,16 @@ export function GameCanvas({ gameState, onGameOver, onScoreUpdate, onEncountered
     })
 
     // Обновляем позиции объектов
-    const previousBonusCount = newState.entities.filter(e => e.type === 'bonus').length
+    const previousBonusCount = newState.entities.filter((e: GameEntity) => e.type === 'bonus').length
     newState = updateGameEntities(newState, currentConfig)
-    const currentBonusCount = newState.entities.filter(e => e.type === 'bonus').length
-    
+    const currentBonusCount = newState.entities.filter((e: GameEntity) => e.type === 'bonus').length
+
     // Обновляем снаряды пушки
     newState = updateCannonBalls(newState)
-    
+
     // Проверяем попадания снарядов
     newState = checkCannonBallHits(newState)
-    
+
     // Если количество бонусов уменьшилось, значит игрок собрал бонус
     if (previousBonusCount > currentBonusCount && onBonusCollected) {
       // Найдем какой бонус был собран (это упрощение, в реальности нужно отслеживать конкретный тип)
@@ -680,7 +686,7 @@ export function GameCanvas({ gameState, onGameOver, onScoreUpdate, onEncountered
       const randomBonusType = bonusTypes[Math.floor(Math.random() * bonusTypes.length)]
       onBonusCollected(randomBonusType)
     }
-    
+
     // Проверяем, были ли побеждены боссы
     if (newState.defeatedBossesThisUpdate && newState.defeatedBossesThisUpdate > 0) {
       // Здесь можно добавить обработку побежденных боссов
@@ -719,34 +725,34 @@ export function GameCanvas({ gameState, onGameOver, onScoreUpdate, onEncountered
 
     // Очищаем canvas
     ctx.clearRect(0, 0, canvas.width, canvas.height)
-    
+
     const state = gameStateRef.current
 
     // Определяем тему (проверяем класс dark на html элементе)
     const isDarkTheme = document.documentElement.classList.contains('dark')
-    
+
     // Рисуем игрока (круг) - фиолетовый цвет с адаптивной обводкой
     ctx.fillStyle = '#391CFF' // Фиолетовый цвет
     ctx.strokeStyle = isDarkTheme ? '#ffffff' : '#000000' // Белая обводка в темной теме, черная в светлой
     ctx.lineWidth = 2
     ctx.beginPath()
     ctx.arc(
-      state.player.position.x, 
-      state.player.position.y, 
-      state.player.size.width / 2, 
-      0, 
+      state.player.position.x,
+      state.player.position.y,
+      state.player.size.width / 2,
+      0,
       2 * Math.PI
     )
     ctx.fill()
     ctx.stroke()
 
     // Рисуем игровые объекты
-    state.entities.forEach(entity => {
+    state.entities.forEach((entity: GameEntity) => {
       ctx.fillStyle = entity.color
-      
-      if (entity.type === 'bouncing' || entity.type === 'projectile' || 
-          entity.type === 'pentagon' || entity.type === 'lightning' || 
-          entity.type === 'fire') {
+
+      if (entity.type === 'bouncing' || entity.type === 'projectile' ||
+        entity.type === 'pentagon' || entity.type === 'lightning' ||
+        entity.type === 'fire') {
         // Рисуем круг
         ctx.beginPath()
         ctx.arc(
@@ -763,17 +769,17 @@ export function GameCanvas({ gameState, onGameOver, onScoreUpdate, onEncountered
         const centerX = entity.position.x
         const centerY = entity.position.y
         const radius = entity.size.width / 2
-        
+
         ctx.save()
         ctx.translate(centerX, centerY)
         ctx.rotate(triangleEntity.rotation)
-        
+
         ctx.beginPath()
         for (let i = 0; i < 3; i++) {
           const angle = (i * 2 * Math.PI) / 3
           const x = Math.cos(angle) * radius
           const y = Math.sin(angle) * radius
-          
+
           if (i === 0) {
             ctx.moveTo(x, y)
           } else {
@@ -790,14 +796,14 @@ export function GameCanvas({ gameState, onGameOver, onScoreUpdate, onEncountered
         const outerRadius = entity.size.width / 2
         const innerRadius = outerRadius * 0.4
         const spikes = 5
-        
+
         ctx.beginPath()
         for (let i = 0; i < spikes * 2; i++) {
           const angle = (i * Math.PI) / spikes
           const radius = i % 2 === 0 ? outerRadius : innerRadius
           const x = centerX + Math.cos(angle) * radius
           const y = centerY + Math.sin(angle) * radius
-          
+
           if (i === 0) {
             ctx.moveTo(x, y)
           } else {
@@ -809,20 +815,20 @@ export function GameCanvas({ gameState, onGameOver, onScoreUpdate, onEncountered
       } else if (entity.type === 'laser') {
         // Рисуем лазерный луч
         const laserEntity = entity as import('@/types/game').LaserBeam
-        
+
         ctx.strokeStyle = entity.color
         ctx.lineWidth = laserEntity.width
         ctx.beginPath()
-        
+
         const startX = laserEntity.centerX + Math.cos(laserEntity.angle) * 10
         const startY = laserEntity.centerY + Math.sin(laserEntity.angle) * 10
         const endX = laserEntity.centerX + Math.cos(laserEntity.angle) * laserEntity.length
         const endY = laserEntity.centerY + Math.sin(laserEntity.angle) * laserEntity.length
-        
+
         ctx.moveTo(startX, startY)
         ctx.lineTo(endX, endY)
         ctx.stroke()
-        
+
         // Центр лазера
         ctx.fillStyle = entity.color
         ctx.beginPath()
@@ -831,7 +837,7 @@ export function GameCanvas({ gameState, onGameOver, onScoreUpdate, onEncountered
       } else if (entity.type === 'mine') {
         // Рисуем мину
         const mineEntity = entity as import('@/types/game').Mine
-        
+
         // Основная мина
         ctx.fillStyle = mineEntity.isArmed ? '#dc2626' : '#525252' // Красный если вооружена
         ctx.fillRect(
@@ -840,7 +846,7 @@ export function GameCanvas({ gameState, onGameOver, onScoreUpdate, onEncountered
           entity.size.width,
           entity.size.height
         )
-        
+
         // Область взрыва (только если вооружена)
         if (mineEntity.isArmed) {
           ctx.strokeStyle = '#dc2626'
@@ -898,7 +904,7 @@ export function GameCanvas({ gameState, onGameOver, onScoreUpdate, onEncountered
       } else if (entity.type === 'ghost-ball') {
         // Рисуем призрачный шар
         const ghostEntity = entity as import('@/types/game').GhostBall
-        
+
         ctx.globalAlpha = ghostEntity.opacity
         ctx.beginPath()
         ctx.arc(
@@ -913,7 +919,7 @@ export function GameCanvas({ gameState, onGameOver, onScoreUpdate, onEncountered
       } else if (entity.type === 'snake-segment') {
         // Рисуем сегмент змейки
         const segmentEntity = entity as import('@/types/game').SnakeSegment
-        
+
         ctx.fillRect(
           entity.position.x - entity.size.width / 2,
           entity.position.y - entity.size.height / 2,
@@ -971,7 +977,7 @@ export function GameCanvas({ gameState, onGameOver, onScoreUpdate, onEncountered
         const centerX = entity.position.x;
         const centerY = entity.position.y;
         const radius = entity.size.width / 2;
-        
+
         ctx.save();
         ctx.translate(centerX, centerY);
         ctx.beginPath();
@@ -1035,11 +1041,11 @@ export function GameCanvas({ gameState, onGameOver, onScoreUpdate, onEncountered
       } else if (entity.type === 'mutated-enemy') {
         // Рисуем мутированного врага
         const mutatedEntity = entity as import('@/types/game').MutatedEnemy;
-        
+
         // Рисуем пульсирующее свечение
         const currentTime = Date.now();
         const pulseAlpha = 0.3 + 0.4 * Math.sin(currentTime / 200); // Быстрая пульсация
-        
+
         ctx.save();
         ctx.globalAlpha = pulseAlpha;
         ctx.beginPath();
@@ -1049,7 +1055,7 @@ export function GameCanvas({ gameState, onGameOver, onScoreUpdate, onEncountered
         ctx.shadowBlur = 20;
         ctx.fill();
         ctx.restore();
-        
+
         // Рисуем основное тело мутированного врага
         ctx.fillStyle = entity.color;
         ctx.strokeStyle = '#ffffff';
@@ -1064,7 +1070,7 @@ export function GameCanvas({ gameState, onGameOver, onScoreUpdate, onEncountered
         );
         ctx.fill();
         ctx.stroke();
-        
+
         // Рисуем символ мутации
         ctx.fillStyle = 'white';
         ctx.font = `bold ${Math.max(12, entity.size.width / 3)}px sans-serif`;
@@ -1074,12 +1080,12 @@ export function GameCanvas({ gameState, onGameOver, onScoreUpdate, onEncountered
       } else if (entity.type === 'boss') {
         // Рисуем босса
         const bossEntity = entity as import('@/types/game').Boss;
-        
+
         // Рисуем полосу здоровья
         const healthBarWidth = entity.size.width;
         const healthBarHeight = 6;
         const healthPercent = bossEntity.health / bossEntity.maxHealth;
-        
+
         // Фон полосы здоровья
         ctx.fillStyle = '#374151';
         ctx.fillRect(
@@ -1088,7 +1094,7 @@ export function GameCanvas({ gameState, onGameOver, onScoreUpdate, onEncountered
           healthBarWidth,
           healthBarHeight
         );
-        
+
         // Полоса здоровья
         ctx.fillStyle = healthPercent > 0.5 ? '#10b981' : healthPercent > 0.25 ? '#f59e0b' : '#ef4444';
         ctx.fillRect(
@@ -1097,12 +1103,12 @@ export function GameCanvas({ gameState, onGameOver, onScoreUpdate, onEncountered
           healthBarWidth * healthPercent,
           healthBarHeight
         );
-        
+
         // Рисуем тело босса с пульсацией
         const currentTime = Date.now();
         const pulseScale = 1 + 0.1 * Math.sin(currentTime / 300);
         const size = entity.size.width * pulseScale;
-        
+
         ctx.save();
         ctx.fillStyle = entity.color;
         ctx.strokeStyle = '#ffffff';
@@ -1111,7 +1117,7 @@ export function GameCanvas({ gameState, onGameOver, onScoreUpdate, onEncountered
         ctx.arc(entity.position.x, entity.position.y, size / 2, 0, 2 * Math.PI);
         ctx.fill();
         ctx.stroke();
-        
+
         // Рисуем корону для босса
         ctx.fillStyle = '#fbbf24';
         ctx.font = `bold ${Math.max(16, size / 4)}px sans-serif`;
@@ -1141,7 +1147,7 @@ export function GameCanvas({ gameState, onGameOver, onScoreUpdate, onEncountered
     if (state.isAiming && state.cannonAmmo > 0) {
       const playerPos = state.player.position
       const aimPos = state.aimPosition
-      
+
       // Рисуем линию прицеливания
       ctx.strokeStyle = '#ef4444' // red-500
       ctx.lineWidth = 2
@@ -1151,14 +1157,14 @@ export function GameCanvas({ gameState, onGameOver, onScoreUpdate, onEncountered
       ctx.lineTo(aimPos.x, aimPos.y)
       ctx.stroke()
       ctx.setLineDash([])
-      
+
       // Рисуем прицел
       ctx.strokeStyle = '#ef4444'
       ctx.lineWidth = 3
       ctx.beginPath()
       ctx.arc(aimPos.x, aimPos.y, 20, 0, 2 * Math.PI)
       ctx.stroke()
-      
+
       // Рисуем крестик прицела
       ctx.beginPath()
       ctx.moveTo(aimPos.x - 10, aimPos.y)
@@ -1167,7 +1173,7 @@ export function GameCanvas({ gameState, onGameOver, onScoreUpdate, onEncountered
       ctx.lineTo(aimPos.x, aimPos.y + 10)
       ctx.stroke()
     }
-    
+
     // Рисуем индикатор патронов если есть пушка
     if (state.cannonAmmo > 0) {
       ctx.fillStyle = '#f59e0b' // amber-500
@@ -1175,11 +1181,11 @@ export function GameCanvas({ gameState, onGameOver, onScoreUpdate, onEncountered
       ctx.textAlign = 'left'
       ctx.textBaseline = 'top'
       ctx.fillText(`Патроны: ${state.cannonAmmo}`, 20, 60)
-      
+
       // Рисуем подсказку
       ctx.fillStyle = '#6b7280' // gray-500
       ctx.font = '14px sans-serif'
-      ctx.fillText('Пробел - прицеливание, ПКМ - стрельба', 20, 90)
+      ctx.fillText('R - прицеливание, ЛКМ - стрельба', 20, 95)
     }
 
     // Планируем следующий кадр рендеринга
@@ -1198,14 +1204,14 @@ export function GameCanvas({ gameState, onGameOver, onScoreUpdate, onEncountered
 
     canvas.addEventListener('mousemove', handleMouseMove)
     canvas.addEventListener('mousedown', handleMouseClick)
-    canvas.addEventListener('contextmenu', (e) => e.preventDefault()) // Отключаем контекстное меню
+    canvas.addEventListener('contextmenu', (e: Event) => e.preventDefault()) // Отключаем контекстное меню
     canvas.addEventListener('touchmove', handleTouchMove, { passive: false })
     window.addEventListener('keydown', handleKeyDown)
 
     return () => {
       canvas.removeEventListener('mousemove', handleMouseMove)
       canvas.removeEventListener('mousedown', handleMouseClick)
-      canvas.removeEventListener('contextmenu', (e) => e.preventDefault())
+      canvas.removeEventListener('contextmenu', (e: Event) => e.preventDefault())
       canvas.removeEventListener('touchmove', handleTouchMove)
       window.removeEventListener('keydown', handleKeyDown)
     }
