@@ -2220,8 +2220,8 @@ export function createShotgunBlast(gameState: GameState, targetPosition: Positio
       id: `cannon-ball-${Date.now()}-${index}`,
       type: 'cannon-ball',
       position: { ...playerPos },
-      size: { width: 6, height: 6 },
-      color: '#fbbf24', // amber-400
+      size: { width: 20, height: 8 }, // Вытянутый прямоугольник
+      color: '#3b82f6', // blue-500
       velocity,
       speed: 8,
       damage: 1

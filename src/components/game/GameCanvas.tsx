@@ -379,7 +379,9 @@ export function GameCanvas({ gameState, onGameOver, onScoreUpdate, onEncountered
     const clickY = (event.clientY - rect.top) * scaleY
 
     // Создаем дробовой выстрел
+    console.log('Стрельба! Патроны:', gameStateRef.current.cannonAmmo, 'isAiming:', gameStateRef.current.isAiming)
     const newState = createShotgunBlast(gameStateRef.current, { x: clickX, y: clickY })
+    console.log('Снарядов создано:', newState.entities.filter(e => e.type === 'cannon-ball').length)
 
     gameStateRef.current = newState
     setLocalGameState(newState)
@@ -1129,20 +1131,30 @@ export function GameCanvas({ gameState, onGameOver, onScoreUpdate, onEncountered
         ctx.fillText('👑', entity.position.x, entity.position.y);
         ctx.restore();
       } else if (entity.type === 'cannon-ball') {
-        // Рисуем снаряд пушки
-        ctx.fillStyle = entity.color;
-        ctx.strokeStyle = '#ffffff';
-        ctx.lineWidth = 1;
-        ctx.beginPath();
-        ctx.arc(
-          entity.position.x,
-          entity.position.y,
-          entity.size.width / 2,
-          0,
-          2 * Math.PI
-        );
-        ctx.fill();
-        ctx.stroke();
+        // Рисуем снаряд пушки как синий скруглённый прямоугольник
+        const cannonBall = entity as CannonBall
+        ctx.save()
+
+        // Поворачиваем по направлению движения
+        const angle = Math.atan2(cannonBall.velocity.y, cannonBall.velocity.x)
+        ctx.translate(entity.position.x, entity.position.y)
+        ctx.rotate(angle)
+
+        // Рисуем скруглённый прямоугольник
+        const width = entity.size.width
+        const height = entity.size.height
+        const radius = height / 2 // Радиус скругления
+
+        ctx.fillStyle = entity.color
+        ctx.strokeStyle = '#60a5fa' // blue-400 для обводки
+        ctx.lineWidth = 2
+
+        ctx.beginPath()
+        ctx.roundRect(-width / 2, -height / 2, width, height, radius)
+        ctx.fill()
+        ctx.stroke()
+
+        ctx.restore()
       }
     })
 
