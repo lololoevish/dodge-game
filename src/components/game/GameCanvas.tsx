@@ -1140,17 +1140,28 @@ export function GameCanvas({ gameState, onGameOver, onScoreUpdate, onEncountered
         ctx.translate(entity.position.x, entity.position.y)
         ctx.rotate(angle)
 
-        // Рисуем скруглённый прямоугольник
-        const width = entity.size.width
-        const height = entity.size.height
-        const radius = height / 2 // Радиус скругления
+        // Рисуем скруглённый прямоугольник вручную
+        const w = entity.size.width
+        const h = entity.size.height
+        const r = Math.min(h / 2, w / 2, 4) // Радиус скругления
+        const x = -w / 2
+        const y = -h / 2
 
         ctx.fillStyle = entity.color
         ctx.strokeStyle = '#60a5fa' // blue-400 для обводки
         ctx.lineWidth = 2
 
         ctx.beginPath()
-        ctx.roundRect(-width / 2, -height / 2, width, height, radius)
+        ctx.moveTo(x + r, y)
+        ctx.lineTo(x + w - r, y)
+        ctx.arcTo(x + w, y, x + w, y + r, r)
+        ctx.lineTo(x + w, y + h - r)
+        ctx.arcTo(x + w, y + h, x + w - r, y + h, r)
+        ctx.lineTo(x + r, y + h)
+        ctx.arcTo(x, y + h, x, y + h - r, r)
+        ctx.lineTo(x, y + r)
+        ctx.arcTo(x, y, x + r, y, r)
+        ctx.closePath()
         ctx.fill()
         ctx.stroke()
 
