@@ -752,6 +752,10 @@ export function GameCanvas({ gameState, onGameOver, onScoreUpdate, onEncountered
     ctx.stroke()
 
     // Рисуем игровые объекты
+    const cannonBallsCount = state.entities.filter(e => e.type === 'cannon-ball').length
+    if (cannonBallsCount > 0) {
+      console.log('Отрисовка: cannon-balls в entities:', cannonBallsCount)
+    }
     state.entities.forEach((entity: GameEntity) => {
       ctx.fillStyle = entity.color
 
