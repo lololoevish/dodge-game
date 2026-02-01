@@ -362,6 +362,9 @@ export function GameCanvas({ gameState, onGameOver, onScoreUpdate, onEncountered
     // Только левая кнопка мыши для стрельбы
     if (event.button !== 0) return
 
+    // Стрельба работает только в режиме прицеливания
+    if (!gameStateRef.current.isAiming) return
+
     event.preventDefault()
 
     // Проверяем, есть ли патроны
