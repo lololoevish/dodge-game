@@ -1182,38 +1182,14 @@ export function GameCanvas({ gameState, onGameOver, onScoreUpdate, onEncountered
         ctx.restore();
       } else if (entity.type === 'cannon-ball') {
         // Рисуем снаряд пушки как синий скруглённый прямоугольник
-        const cannonBall = entity as CannonBall
-        ctx.save()
-
-        // Поворачиваем по направлению движения
-        const angle = Math.atan2(cannonBall.velocity.y, cannonBall.velocity.x)
-        ctx.translate(entity.position.x, entity.position.y)
-        ctx.rotate(angle)
-
-        // Рисуем скруглённый прямоугольник
-        const w = 20
-        const h = 8
-        const r = 4
-
+        // Рисуем снаряд пушки как синий круг
         ctx.fillStyle = '#3b82f6' // blue-500
         ctx.strokeStyle = '#60a5fa' // blue-400
         ctx.lineWidth = 2
-
         ctx.beginPath()
-        ctx.moveTo(-w / 2 + r, -h / 2)
-        ctx.lineTo(w / 2 - r, -h / 2)
-        ctx.arcTo(w / 2, -h / 2, w / 2, -h / 2 + r, r)
-        ctx.lineTo(w / 2, h / 2 - r)
-        ctx.arcTo(w / 2, h / 2, w / 2 - r, h / 2, r)
-        ctx.lineTo(-w / 2 + r, h / 2)
-        ctx.arcTo(-w / 2, h / 2, -w / 2, h / 2 - r, r)
-        ctx.lineTo(-w / 2, -h / 2 + r)
-        ctx.arcTo(-w / 2, -h / 2, -w / 2 + r, -h / 2, r)
-        ctx.closePath()
+        ctx.arc(entity.position.x, entity.position.y, 8, 0, 2 * Math.PI)
         ctx.fill()
         ctx.stroke()
-
-        ctx.restore()
       }
     })
 
