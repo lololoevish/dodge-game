@@ -1182,12 +1182,12 @@ export function GameCanvas({ gameState, onGameOver, onScoreUpdate, onEncountered
         ctx.restore();
       } else if (entity.type === 'cannon-ball') {
         // Рисуем снаряд пушки как синий скруглённый прямоугольник
-        // Рисуем снаряд пушки как синий круг
-        ctx.fillStyle = '#3b82f6' // blue-500
-        ctx.strokeStyle = '#60a5fa' // blue-400
-        ctx.lineWidth = 2
+        // Рисуем снаряд пушки как яркий круг
+        ctx.fillStyle = '#ff0000' // ЯРКО-КРАСНЫЙ
+        ctx.strokeStyle = '#ffff00' // ЖЁЛТАЯ обводка
+        ctx.lineWidth = 3
         ctx.beginPath()
-        ctx.arc(entity.position.x, entity.position.y, 8, 0, 2 * Math.PI)
+        ctx.arc(entity.position.x, entity.position.y, 12, 0, 2 * Math.PI)
         ctx.fill()
         ctx.stroke()
       }
