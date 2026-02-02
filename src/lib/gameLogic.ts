@@ -2239,11 +2239,6 @@ export function createShotgunBlast(gameState: GameState, targetPosition: Positio
 
 // Функция обновления снарядов пушки
 export function updateCannonBalls(gameState: GameState): GameState {
-  const cannonBallsBefore = gameState.entities.filter(e => e.type === 'cannon-ball')
-  if (cannonBallsBefore.length > 0) {
-    console.log('updateCannonBalls: до обновления', cannonBallsBefore.length, 'снарядов')
-  }
-
   const updatedEntities = gameState.entities.map(entity => {
     if (entity.type === 'cannon-ball') {
       const cannonBall = entity as CannonBall
@@ -2251,7 +2246,6 @@ export function updateCannonBalls(gameState: GameState): GameState {
         x: cannonBall.position.x + cannonBall.velocity.x,
         y: cannonBall.position.y + cannonBall.velocity.y
       }
-      console.log('Обновляю позицию:', cannonBall.position, '->', newPosition, 'velocity:', cannonBall.velocity)
 
       // Удаляем снаряд если он вышел за границы
       if (newPosition.x < 0 || newPosition.x > gameState.gameArea.width ||

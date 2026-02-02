@@ -379,9 +379,7 @@ export function GameCanvas({ gameState, onGameOver, onScoreUpdate, onEncountered
     const clickY = (event.clientY - rect.top) * scaleY
 
     // Создаем дробовой выстрел
-    console.log('Стрельба! Патроны:', gameStateRef.current.cannonAmmo, 'isAiming:', gameStateRef.current.isAiming)
     const newState = createShotgunBlast(gameStateRef.current, { x: clickX, y: clickY })
-    console.log('Снарядов создано:', newState.entities.filter(e => e.type === 'cannon-ball').length)
 
     gameStateRef.current = newState
     setLocalGameState(newState)
@@ -677,15 +675,7 @@ export function GameCanvas({ gameState, onGameOver, onScoreUpdate, onEncountered
     newState = updateGameEntities(newState, currentConfig)
     const currentBonusCount = newState.entities.filter((e: GameEntity) => e.type === 'bonus').length
 
-    // Обновляем снаряды пушки
-    const cannonBallsBeforeUpdate = newState.entities.filter((e: GameEntity) => e.type === 'cannon-ball').length
-    if (cannonBallsBeforeUpdate > 0) {
-      console.log('GameCanvas: перед updateCannonBalls, снарядов:', cannonBallsBeforeUpdate)
-    }
-    newState = updateCannonBalls(newState)
-
-    // Проверяем попадания снарядов
-    newState = checkCannonBallHits(newState)
+    // Снаряды пушки теперь обновляются в render()
 
     // Если количество бонусов уменьшилось, значит игрок собрал бонус
     if (previousBonusCount > currentBonusCount && onBonusCollected) {
@@ -735,7 +725,63 @@ export function GameCanvas({ gameState, onGameOver, onScoreUpdate, onEncountered
     // Очищаем canvas
     ctx.clearRect(0, 0, canvas.width, canvas.height)
 
-    const state = gameStateRef.current
+    let state = gameStateRef.current
+
+    // === ОБНОВЛЕНИЕ СНАРЯДОВ ПУШКИ ===
+    // Обновляем позиции снарядов прямо здесь, в render
+    if (state.isPlaying) {
+      const updatedEntities = state.entities.map(entity => {
+        if (entity.type === 'cannon-ball') {
+          const cannonBall = entity as CannonBall
+          const newPosition = {
+            x: cannonBall.position.x + cannonBall.velocity.x,
+            y: cannonBall.position.y + cannonBall.velocity.y
+          }
+
+          // Удаляем снаряд если он вышел за границы
+          if (newPosition.x < 0 || newPosition.x > canvas.width ||
+            newPosition.y < 0 || newPosition.y > canvas.height) {
+            return null
+          }
+
+          return { ...cannonBall, position: newPosition }
+        }
+        return entity
+      }).filter(entity => entity !== null) as GameEntity[]
+
+      // Проверяем попадания снарядов по врагам
+      const cannonBalls = updatedEntities.filter(e => e.type === 'cannon-ball') as CannonBall[]
+      const hitEnemyIds: string[] = []
+      const hitBallIds: string[] = []
+
+      cannonBalls.forEach(ball => {
+        updatedEntities.forEach(enemy => {
+          if (enemy.type === 'player' || enemy.type === 'bonus' ||
+            enemy.type === 'cannon-ball' || enemy.type === 'hazard-zone') return
+          if (hitBallIds.includes(ball.id) || hitEnemyIds.includes(enemy.id)) return
+
+          const dx = ball.position.x - enemy.position.x
+          const dy = ball.position.y - enemy.position.y
+          const distance = Math.sqrt(dx * dx + dy * dy)
+
+          if (distance < (ball.size.width + enemy.size.width) / 2 + 10) {
+            hitBallIds.push(ball.id)
+            hitEnemyIds.push(enemy.id)
+          }
+        })
+      })
+
+      // Удаляем попавшие снаряды и врагов
+      const finalEntities = updatedEntities.filter(e =>
+        !hitBallIds.includes(e.id) && !hitEnemyIds.includes(e.id)
+      )
+
+      // Обновляем состояние
+      if (state.entities !== finalEntities) {
+        state = { ...state, entities: finalEntities }
+        gameStateRef.current = state
+      }
+    }
 
     // Определяем тему (проверяем класс dark на html элементе)
     const isDarkTheme = document.documentElement.classList.contains('dark')
@@ -756,12 +802,6 @@ export function GameCanvas({ gameState, onGameOver, onScoreUpdate, onEncountered
     ctx.stroke()
 
     // Рисуем игровые объекты
-    const cannonBalls = state.entities.filter(e => e.type === 'cannon-ball')
-    if (cannonBalls.length > 0) {
-      console.log('=== CANNON BALLS ===')
-      console.log('Количество:', cannonBalls.length)
-      console.log('Первый снаряд:', JSON.stringify(cannonBalls[0]))
-    }
     state.entities.forEach((entity: GameEntity) => {
       ctx.fillStyle = entity.color
 
@@ -1141,15 +1181,39 @@ export function GameCanvas({ gameState, onGameOver, onScoreUpdate, onEncountered
         ctx.fillText('👑', entity.position.x, entity.position.y);
         ctx.restore();
       } else if (entity.type === 'cannon-ball') {
-        // Рисуем снаряд пушки как простой круг (для отладки)
-        console.log('Рисую cannon-ball на позиции:', entity.position.x, entity.position.y)
-        ctx.fillStyle = '#ff0000' // КРАСНЫЙ для видимости
-        ctx.strokeStyle = '#ffffff'
-        ctx.lineWidth = 3
+        // Рисуем снаряд пушки как синий скруглённый прямоугольник
+        const cannonBall = entity as CannonBall
+        ctx.save()
+
+        // Поворачиваем по направлению движения
+        const angle = Math.atan2(cannonBall.velocity.y, cannonBall.velocity.x)
+        ctx.translate(entity.position.x, entity.position.y)
+        ctx.rotate(angle)
+
+        // Рисуем скруглённый прямоугольник
+        const w = 20
+        const h = 8
+        const r = 4
+
+        ctx.fillStyle = '#3b82f6' // blue-500
+        ctx.strokeStyle = '#60a5fa' // blue-400
+        ctx.lineWidth = 2
+
         ctx.beginPath()
-        ctx.arc(entity.position.x, entity.position.y, 15, 0, 2 * Math.PI) // Больше размер
+        ctx.moveTo(-w / 2 + r, -h / 2)
+        ctx.lineTo(w / 2 - r, -h / 2)
+        ctx.arcTo(w / 2, -h / 2, w / 2, -h / 2 + r, r)
+        ctx.lineTo(w / 2, h / 2 - r)
+        ctx.arcTo(w / 2, h / 2, w / 2 - r, h / 2, r)
+        ctx.lineTo(-w / 2 + r, h / 2)
+        ctx.arcTo(-w / 2, h / 2, -w / 2, h / 2 - r, r)
+        ctx.lineTo(-w / 2, -h / 2 + r)
+        ctx.arcTo(-w / 2, -h / 2, -w / 2 + r, -h / 2, r)
+        ctx.closePath()
         ctx.fill()
         ctx.stroke()
+
+        ctx.restore()
       }
     })
 
