@@ -678,6 +678,10 @@ export function GameCanvas({ gameState, onGameOver, onScoreUpdate, onEncountered
     const currentBonusCount = newState.entities.filter((e: GameEntity) => e.type === 'bonus').length
 
     // Обновляем снаряды пушки
+    const cannonBallsBeforeUpdate = newState.entities.filter((e: GameEntity) => e.type === 'cannon-ball').length
+    if (cannonBallsBeforeUpdate > 0) {
+      console.log('GameCanvas: перед updateCannonBalls, снарядов:', cannonBallsBeforeUpdate)
+    }
     newState = updateCannonBalls(newState)
 
     // Проверяем попадания снарядов
