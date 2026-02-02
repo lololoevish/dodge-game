@@ -752,9 +752,11 @@ export function GameCanvas({ gameState, onGameOver, onScoreUpdate, onEncountered
     ctx.stroke()
 
     // Рисуем игровые объекты
-    const cannonBallsCount = state.entities.filter(e => e.type === 'cannon-ball').length
-    if (cannonBallsCount > 0) {
-      console.log('Отрисовка: cannon-balls в entities:', cannonBallsCount)
+    const cannonBalls = state.entities.filter(e => e.type === 'cannon-ball')
+    if (cannonBalls.length > 0) {
+      console.log('=== CANNON BALLS ===')
+      console.log('Количество:', cannonBalls.length)
+      console.log('Первый снаряд:', JSON.stringify(cannonBalls[0]))
     }
     state.entities.forEach((entity: GameEntity) => {
       ctx.fillStyle = entity.color
@@ -1136,11 +1138,12 @@ export function GameCanvas({ gameState, onGameOver, onScoreUpdate, onEncountered
         ctx.restore();
       } else if (entity.type === 'cannon-ball') {
         // Рисуем снаряд пушки как простой круг (для отладки)
-        ctx.fillStyle = '#3b82f6' // синий
+        console.log('Рисую cannon-ball на позиции:', entity.position.x, entity.position.y)
+        ctx.fillStyle = '#ff0000' // КРАСНЫЙ для видимости
         ctx.strokeStyle = '#ffffff'
-        ctx.lineWidth = 2
+        ctx.lineWidth = 3
         ctx.beginPath()
-        ctx.arc(entity.position.x, entity.position.y, 10, 0, 2 * Math.PI)
+        ctx.arc(entity.position.x, entity.position.y, 15, 0, 2 * Math.PI) // Больше размер
         ctx.fill()
         ctx.stroke()
       }
