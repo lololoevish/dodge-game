@@ -88,6 +88,7 @@ export function GameCanvas({ gameState, onGameOver, onScoreUpdate, onEncountered
   const lastCrystalControllerSpawnRef = useRef<number>(0)
   const lastPhantomDuplicatorSpawnRef = useRef<number>(0)
   const lastContaminationZoneSpawnRef = useRef<number>(0)
+  const bulletImageRef = useRef<HTMLImageElement | null>(null)
   const [windowSize, setWindowSize] = useState(getWindowDimensions());
 
   const [gameConfig, setGameConfig] = useState<GameConfig>(() => ({
@@ -1181,15 +1182,36 @@ export function GameCanvas({ gameState, onGameOver, onScoreUpdate, onEncountered
         ctx.fillText('👑', entity.position.x, entity.position.y);
         ctx.restore();
       } else if (entity.type === 'cannon-ball') {
-        // Рисуем снаряд пушки как синий скруглённый прямоугольник
-        // Рисуем снаряд пушки как яркий круг
-        ctx.fillStyle = '#ff0000' // ЯРКО-КРАСНЫЙ
-        ctx.strokeStyle = '#ffff00' // ЖЁЛТАЯ обводка
-        ctx.lineWidth = 3
-        ctx.beginPath()
-        ctx.arc(entity.position.x, entity.position.y, 12, 0, 2 * Math.PI)
-        ctx.fill()
-        ctx.stroke()
+        // Рисуем снаряд пушки используя изображение
+        const cannonBall = entity as CannonBall
+
+        // Загружаем изображение если ещё не загружено
+        if (!bulletImageRef.current) {
+          bulletImageRef.current = new Image()
+          bulletImageRef.current.src = '/bullet.jpg'
+        }
+
+        const img = bulletImageRef.current
+        if (img.complete && img.naturalWidth > 0) {
+          ctx.save()
+
+          // Поворачиваем по направлению движения
+          const angle = Math.atan2(cannonBall.velocity.y, cannonBall.velocity.x)
+          ctx.translate(entity.position.x, entity.position.y)
+          ctx.rotate(angle)
+
+          // Рисуем изображение (размер 24x24)
+          const size = 24
+          ctx.drawImage(img, -size / 2, -size / 2, size, size)
+
+          ctx.restore()
+        } else {
+          // Fallback: рисуем круг пока изображение загружается
+          ctx.fillStyle = '#3b82f6'
+          ctx.beginPath()
+          ctx.arc(entity.position.x, entity.position.y, 8, 0, 2 * Math.PI)
+          ctx.fill()
+        }
       }
     })
 
