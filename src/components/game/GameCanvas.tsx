@@ -671,7 +671,7 @@ export function GameCanvas({ gameState, onGameOver, onScoreUpdate, onEncountered
       
       if (entity.type === 'bouncing' || entity.type === 'projectile' || 
           entity.type === 'pentagon' || entity.type === 'lightning' || 
-          entity.type === 'fire') {
+          entity.type === 'fire' || entity.type === 'cannon-ball') {
         // Рисуем круг
         ctx.beginPath()
         ctx.arc(
