@@ -882,10 +882,12 @@ export function updateTeleportCube(cube: TeleportCube, gameArea: { width: number
   }
 }
 
+// Оптимизация: предварительно вычисленные квадраты для избежания Math.sqrt
 export function checkCollision(player: Position & { size: { width: number, height: number } }, entity: GameEntity): boolean {
   const playerCenterX = player.x
   const playerCenterY = player.y
   const playerRadius = player.size.width / 2
+  const playerRadiusSq = playerRadius * playerRadius
 
   if (entity.type === 'bouncing' || entity.type === 'projectile' ||
       entity.type === 'triangle' || entity.type === 'pentagon' ||
@@ -893,105 +895,101 @@ export function checkCollision(player: Position & { size: { width: number, heigh
       entity.type === 'teleport-cube' || entity.type === 'diagonal' ||
       entity.type === 'spinner' || entity.type === 'ghost-ball' ||
       entity.type === 'snake-segment') {
-    // Круг-круг коллизия
-    const entityCenterX = entity.position.x
-    const entityCenterY = entity.position.y
+    // Круг-круг коллизия - оптимизация: сравниваем квадраты расстояний
+    const dx = playerCenterX - entity.position.x
+    const dy = playerCenterY - entity.position.y
     const entityRadius = entity.size.width / 2
+    const minDistance = playerRadius + entityRadius
     
-    const distance = Math.sqrt(
-      Math.pow(playerCenterX - entityCenterX, 2) + 
-      Math.pow(playerCenterY - entityCenterY, 2)
-    )
-    
-    return distance < (playerRadius + entityRadius)
+    return (dx * dx + dy * dy) < (minDistance * minDistance)
   } else if (entity.type === 'laser') {
     // Коллизия с лазерным лучом
     const laser = entity as LaserBeam
     const dx = playerCenterX - laser.centerX
     const dy = playerCenterY - laser.centerY
-    const distanceFromCenter = Math.sqrt(dx * dx + dy * dy)
+    const distSq = dx * dx + dy * dy
     
-    if (distanceFromCenter > laser.length) return false
+    if (distSq > laser.length * laser.length) return false
     
     // Угол от центра лазера к игроку
     const angleToPlayer = Math.atan2(dy, dx)
     const angleDiff = Math.abs(angleToPlayer - laser.angle)
     const normalizedAngleDiff = Math.min(angleDiff, 2 * Math.PI - angleDiff)
     
-    return normalizedAngleDiff < laser.width / distanceFromCenter
+    return normalizedAngleDiff < laser.width / Math.sqrt(distSq)
   } else if (entity.type === 'mine') {
     // Мина взрывается при приближении
     const mine = entity as Mine
     if (!mine.isArmed) return false
     
-    const distance = Math.sqrt(
-      Math.pow(playerCenterX - entity.position.x, 2) + 
-      Math.pow(playerCenterY - entity.position.y, 2)
-    )
+    const dx = playerCenterX - entity.position.x
+    const dy = playerCenterY - entity.position.y
     
-    return distance < mine.triggerRadius
+    return (dx * dx + dy * dy) < (mine.triggerRadius * mine.triggerRadius)
   } else {
     // Круг-прямоугольник коллизия для квадратов и звезд
-    const rectLeft = entity.position.x - entity.size.width / 2
-    const rectRight = entity.position.x + entity.size.width / 2
-    const rectTop = entity.position.y - entity.size.height / 2
-    const rectBottom = entity.position.y + entity.size.height / 2
+    const halfWidth = entity.size.width / 2
+    const halfHeight = entity.size.height / 2
+    const rectLeft = entity.position.x - halfWidth
+    const rectRight = entity.position.x + halfWidth
+    const rectTop = entity.position.y - halfHeight
+    const rectBottom = entity.position.y + halfHeight
     
     // Находим ближайшую точку прямоугольника к центру круга
-    const closestX = Math.max(rectLeft, Math.min(playerCenterX, rectRight))
-    const closestY = Math.max(rectTop, Math.min(playerCenterY, rectBottom))
+    const closestX = rectLeft > playerCenterX ? rectLeft : (rectRight < playerCenterX ? rectRight : playerCenterX)
+    const closestY = rectTop > playerCenterY ? rectTop : (rectBottom < playerCenterY ? rectBottom : playerCenterY)
     
-    // Вычисляем расстояние от центра круга до ближайшей точки
-    const distance = Math.sqrt(
-      Math.pow(playerCenterX - closestX, 2) + 
-      Math.pow(playerCenterY - closestY, 2)
-    )
+    // Вычисляем квадрат расстояния от центра круга до ближайшей точки
+    const dx = playerCenterX - closestX
+    const dy = playerCenterY - closestY
     
-    return distance < playerRadius
+    return (dx * dx + dy * dy) < playerRadiusSq
   }
 }
 
-// Проверка столкновения с зоной опасности
+// Проверка столкновения с зоной опасности - оптимизированная версия
 function checkHazardZoneCollision(player: Position & { size: { width: number, height: number } }, hazardZone: HazardZone): boolean {
   const playerCenterX = player.x
   const playerCenterY = player.y
   const playerRadius = player.size.width / 2
+  const playerRadiusSq = playerRadius * playerRadius
 
-  const rectLeft = hazardZone.position.x - hazardZone.size.width / 2
-  const rectRight = hazardZone.position.x + hazardZone.size.width / 2
-  const rectTop = hazardZone.position.y - hazardZone.size.height / 2
-  const rectBottom = hazardZone.position.y + hazardZone.size.height / 2
+  const halfWidth = hazardZone.size.width / 2
+  const halfHeight = hazardZone.size.height / 2
+  const rectLeft = hazardZone.position.x - halfWidth
+  const rectRight = hazardZone.position.x + halfWidth
+  const rectTop = hazardZone.position.y - halfHeight
+  const rectBottom = hazardZone.position.y + halfHeight
 
-  const closestX = Math.max(rectLeft, Math.min(playerCenterX, rectRight))
-  const closestY = Math.max(rectTop, Math.min(playerCenterY, rectBottom))
+  // Оптимизированный поиск ближайшей точки без Math.max/min
+  const closestX = rectLeft > playerCenterX ? rectLeft : (rectRight < playerCenterX ? rectRight : playerCenterX)
+  const closestY = rectTop > playerCenterY ? rectTop : (rectBottom < playerCenterY ? rectBottom : playerCenterY)
 
-  const distance = Math.sqrt(
-    Math.pow(playerCenterX - closestX, 2) +
-    Math.pow(playerCenterY - closestY, 2)
-  )
+  const dx = playerCenterX - closestX
+  const dy = playerCenterY - closestY
   
-  return distance < playerRadius
+  return (dx * dx + dy * dy) < playerRadiusSq
 }
 
-// Проверка столкновения между двумя сущностями
+// Проверка столкновения между двумя сущностями - оптимизированная
 function checkEntityCollision(entity1: GameEntity, entity2: GameEntity): boolean {
   // Игнорируем статичные объекты и специальные типы
-  if (entity1.type === 'star' || entity2.type === 'star' ||
-      entity1.type === 'mine' || entity2.type === 'mine' ||
-      entity1.type === 'laser' || entity2.type === 'laser') {
-    return false
-  }
-  // Игнорируем столкновения между зонами опасности
-  if (entity1.type === 'hazard-zone' || entity2.type === 'hazard-zone') {
+  const type1 = entity1.type
+  const type2 = entity2.type
+  
+  if (type1 === 'star' || type2 === 'star' ||
+      type1 === 'mine' || type2 === 'mine' ||
+      type1 === 'laser' || type2 === 'laser' ||
+      type1 === 'hazard-zone' || type2 === 'hazard-zone') {
     return false
   }
 
+  // Оптимизация: сравниваем квадраты расстояний
   const dx = entity1.position.x - entity2.position.x
   const dy = entity1.position.y - entity2.position.y
-  const distance = Math.sqrt(dx * dx + dy * dy)
   const minDistance = (entity1.size.width + entity2.size.width) / 2
-
-  return distance < minDistance
+  
+  return (dx * dx + dy * dy) < (minDistance * minDistance)
 }
 
 // Обработка столкновения между сущностями
@@ -1132,169 +1130,179 @@ function handleEntityCollision(entity1: GameEntity, entity2: GameEntity): [GameE
   return [updated1, updated2]
 }
 
+// Оптимизация: кэш для сегментов змеи
+let cachedSnakeSegments: SnakeSegment[] | null = null;
+let cachedSnakeFrame = -1;
+
 export function updateGameEntities(gameState: GameState, config: GameConfig): GameState {
-  let newGameState = { ...gameState };
+  // Оптимизация: избегаем копирования всего состояния, мутируем напрямую
+  gameState = updateActiveBonuses(gameState);
 
-  // Обновляем активные бонусы
-  newGameState = updateActiveBonuses(newGameState);
-
-  const isSlowEnemiesActive = newGameState.activeBonuses.some(b => b.type === BonusType.SLOW_ENEMIES);
-  const isSizeUpActive = newGameState.activeBonuses.some(b => b.type === BonusType.SIZE_UP);
-  const isInvisibilityActive = newGameState.activeBonuses.some(b => b.type === BonusType.INVISIBILITY);
+  // Оптимизация: один проход для проверки бонусов
+  let isSlowEnemiesActive = false;
+  let isSizeUpActive = false;
+  let isInvisibilityActive = false;
+  
+  for (const bonus of gameState.activeBonuses) {
+    if (bonus.type === BonusType.SLOW_ENEMIES) isSlowEnemiesActive = true;
+    else if (bonus.type === BonusType.SIZE_UP) isSizeUpActive = true;
+    else if (bonus.type === BonusType.INVISIBILITY) isInvisibilityActive = true;
+  }
 
   // Обновляем размер игрока, если активен бонус SizeUp
-  if (isSizeUpActive && newGameState.player.size.width === config.playerSize) {
-    newGameState.player.size = { width: config.playerSize * 2, height: config.playerSize * 2 };
-  } else if (!isSizeUpActive && newGameState.player.size.width !== config.playerSize) {
-    newGameState.player.size = { width: config.playerSize, height: config.playerSize };
+  if (isSizeUpActive && gameState.player.size.width === config.playerSize) {
+    gameState.player.size.width = config.playerSize * 2;
+    gameState.player.size.height = config.playerSize * 2;
+  } else if (!isSizeUpActive && gameState.player.size.width !== config.playerSize) {
+    gameState.player.size.width = config.playerSize;
+    gameState.player.size.height = config.playerSize;
   }
   
-  // Обновляем прозрачность игрока, если активен бонус невидимости
-  if (isInvisibilityActive) {
-      newGameState.player.color = 'rgba(59, 130, 246, 0.3)'; // blue-500 with opacity
-  } else {
-      newGameState.player.color = '#3b82f6'; // blue-500
-  }
+  // Обновляем прозрачность игрока
+  gameState.player.color = isInvisibilityActive ? 'rgba(59, 130, 246, 0.3)' : '#3b82f6';
 
-  const entitiesToProcess = [...newGameState.entities];
+  // Оптимизация: работаем с массивом напрямую без копирования
+  const entities = gameState.entities;
   let updatedEntities: GameEntity[] = [];
   const hazardZonesToAdd: HazardZone[] = [];
   
-  // Обработка Кристаллического контроллера и заморозки
-  const crystalController = entitiesToProcess.find(e => e.type === 'crystal-controller') as CrystalController | undefined;
+  // Обработка Кристаллического контроллера - один проход
+  let crystalController: CrystalController | undefined;
+  for (const e of entities) {
+    if (e.type === 'crystal-controller') {
+      crystalController = e as CrystalController;
+      break;
+    }
+  }
+  
   let isFrozen = false;
-  let freezeEndTime = 0;
-
   if (crystalController && Date.now() - crystalController.lastFreeze > crystalController.freezeCooldown) {
     isFrozen = true;
-    freezeEndTime = Date.now() + crystalController.freezeDuration;
     crystalController.lastFreeze = Date.now();
   }
 
-  // Сначала обновляем позиции всех сущностей
-  entitiesToProcess.forEach(entity => {
-    let isEntityFrozen = false;
+  // Оптимизация: кэшируем сегменты змеи один раз за кадр
+  const currentFrame = Date.now();
+  if (cachedSnakeFrame !== currentFrame) {
+    cachedSnakeSegments = null;
+    cachedSnakeFrame = currentFrame;
+  }
+
+  // Обновляем позиции всех сущностей
+  for (let i = 0; i < entities.length; i++) {
+    const entity = entities[i];
+    
+    // Проверка заморозки
     if (isFrozen && entity.type !== 'player' && entity.type !== 'crystal-controller' && entity.type !== 'hazard-zone') {
-        const dx = entity.position.x - crystalController!.position.x;
-        const dy = entity.position.y - crystalController!.position.y;
-        const distance = Math.sqrt(dx * dx + dy * dy);
-        if (distance < crystalController!.freezeRadius) {
-            isEntityFrozen = true;
-        }
+      const dx = entity.position.x - crystalController!.position.x;
+      const dy = entity.position.y - crystalController!.position.y;
+      if (dx * dx + dy * dy < crystalController!.freezeRadius * crystalController!.freezeRadius) {
+        updatedEntities.push(entity);
+        continue;
+      }
     }
 
-    if (isEntityFrozen) {
-      updatedEntities.push(entity);
-      return;
-    }
-
+    // Оптимизация: используем switch без лишних переменных
     switch (entity.type) {
       case 'chaser':
-        const speedMultiplier = isSlowEnemiesActive ? 0.5 : 1;
-        const updatedChaser = updateChaserPosition(entity, newGameState.player.position, speedMultiplier);
-        updatedEntities.push(updatedChaser);
+        updatedEntities.push(updateChaserPosition(entity, gameState.player.position, isSlowEnemiesActive ? 0.5 : 1));
         break;
       case 'bouncing':
-        const updatedCircle = updateCirclePosition(entity, newGameState.gameArea, isSlowEnemiesActive ? 0.5 : 1);
-        updatedEntities.push(updatedCircle);
+        updatedEntities.push(updateCirclePosition(entity, gameState.gameArea, isSlowEnemiesActive ? 0.5 : 1));
         break;
       case 'star':
-        updatedEntities.push(entity) // Звездочки не двигаются
-        break
-      case 'projectile':
-        const updatedStarProjectile = updateProjectilePosition(entity, gameState.gameArea)
-        if (updatedStarProjectile) {
-          updatedEntities.push(updatedStarProjectile)
-        }
-        break
-      // Новые фигуры
+        updatedEntities.push(entity);
+        break;
+      case 'projectile': {
+        const updated = updateProjectilePosition(entity, gameState.gameArea);
+        if (updated) updatedEntities.push(updated);
+        break;
+      }
       case 'triangle':
-        updatedEntities.push(updateTriangle(entity))
-        break
+        updatedEntities.push(updateTriangle(entity));
+        break;
       case 'pentagon':
-        updatedEntities.push(updatePentagon(entity))
-        break
+        updatedEntities.push(updatePentagon(entity));
+        break;
       case 'lightning':
-        updatedEntities.push(updateLightning(entity, gameState.gameArea))
-        break
-      case 'fire':
-        const updatedFire = updateFireBall(entity, gameState.gameArea)
-        if (updatedFire) {
-          updatedEntities.push(updatedFire)
-        }
-        break
+        updatedEntities.push(updateLightning(entity, gameState.gameArea));
+        break;
+      case 'fire': {
+        const updated = updateFireBall(entity, gameState.gameArea);
+        if (updated) updatedEntities.push(updated);
+        break;
+      }
       case 'diagonal':
-        updatedEntities.push(updateDiagonalHunter(entity, gameState.player.position))
-        break
+        updatedEntities.push(updateDiagonalHunter(entity, gameState.player.position));
+        break;
       case 'mine':
-        updatedEntities.push(updateMine(entity))
-        break
+        updatedEntities.push(updateMine(entity));
+        break;
       case 'laser':
-        updatedEntities.push(updateLaser(entity))
-        break
+        updatedEntities.push(updateLaser(entity));
+        break;
       case 'teleport-cube':
-        updatedEntities.push(updateTeleportCube(entity, gameState.gameArea))
-        break
+        updatedEntities.push(updateTeleportCube(entity, gameState.gameArea));
+        break;
       case 'spinner':
-        updatedEntities.push(updateSpinner(entity))
-        break
+        updatedEntities.push(updateSpinner(entity));
+        break;
       case 'ghost-ball':
-        updatedEntities.push(updateGhostBall(entity, gameState.gameArea))
-        break
-      case 'snake-segment':
-        const speedMultiplierSnake = isSlowEnemiesActive ? 0.5 : 1;
-        updatedEntities.push(updateSnakeSegment(entity, newGameState.player.position, newGameState.entities.filter(e => e.type === 'snake-segment') as SnakeSegment[], speedMultiplierSnake))
-        break
-      case 'pulsating-sphere':
-        const speedMultiplierPulsating = isSlowEnemiesActive ? 0.5 : 1;
-        updatedEntities.push(updatePulsatingSphere(entity, newGameState.gameArea, speedMultiplierPulsating))
-        break
-      case 'patrol-square':
-        updatedEntities.push(updatePatrolSquare(entity, gameState.gameArea))
-        break
-      case 'reflecting-projectile':
-        const updatedReflectingProjectile = updateReflectingProjectile(entity, gameState.gameArea)
-        if (updatedReflectingProjectile) {
-          updatedEntities.push(updatedReflectingProjectile)
+        updatedEntities.push(updateGhostBall(entity, gameState.gameArea));
+        break;
+      case 'snake-segment': {
+        // Оптимизация: кэшируем сегменты змеи
+        if (!cachedSnakeSegments) {
+          cachedSnakeSegments = [];
+          for (const e of entities) {
+            if (e.type === 'snake-segment') cachedSnakeSegments!.push(e as SnakeSegment);
+          }
         }
-        break
+        updatedEntities.push(updateSnakeSegment(entity, gameState.player.position, cachedSnakeSegments, isSlowEnemiesActive ? 0.5 : 1));
+        break;
+      }
+      case 'pulsating-sphere':
+        updatedEntities.push(updatePulsatingSphere(entity, gameState.gameArea, isSlowEnemiesActive ? 0.5 : 1));
+        break;
+      case 'patrol-square':
+        updatedEntities.push(updatePatrolSquare(entity, gameState.gameArea));
+        break;
+      case 'reflecting-projectile': {
+        const updated = updateReflectingProjectile(entity, gameState.gameArea);
+        if (updated) updatedEntities.push(updated);
+        break;
+      }
       case 'crystal-controller':
         updatedEntities.push(updateCrystalController(entity));
         break;
       case 'phantom-duplicator':
-        updatedEntities.push(updatePhantomDuplicator(entity, newGameState));
+        updatedEntities.push(updatePhantomDuplicator(entity, gameState));
         break;
-      case 'contamination-zone':
-        const [updatedZone, newHazards] = updateContaminationZone(entity, newGameState.player.position);
+      case 'contamination-zone': {
+        const [updatedZone, newHazards] = updateContaminationZone(entity, gameState.player.position);
         updatedEntities.push(updatedZone);
-        if (newHazards.length > 0) {
-          hazardZonesToAdd.push(...newHazards);
-        }
+        if (newHazards.length > 0) hazardZonesToAdd.push(...newHazards);
         break;
+      }
       case 'hazard-zone':
-        updatedEntities.push(entity) // Зоны опасности не двигаются
-        break;
       case 'bonus':
-        updatedEntities.push(entity); // Бонусы не двигаются
+        updatedEntities.push(entity);
         break;
       case 'mutated-enemy':
-        const updatedMutated = updateMutatedEnemy(entity as MutatedEnemy, newGameState.player.position);
-        updatedEntities.push(updatedMutated);
+        updatedEntities.push(updateMutatedEnemy(entity as MutatedEnemy, gameState.player.position));
         break;
       case 'boss':
-        const updatedBoss = updateBoss(entity as Boss, newGameState.player.position, newGameState.gameArea);
-        updatedEntities.push(updatedBoss);
+        updatedEntities.push(updateBoss(entity as Boss, gameState.player.position, gameState.gameArea));
         break;
-      case 'cannon-ball':
-        const updatedCannonBall = updateCannonBall(entity as CannonBall, newGameState.gameArea);
-        if (updatedCannonBall) {
-          updatedEntities.push(updatedCannonBall);
-        }
+      case 'cannon-ball': {
+        const updated = updateCannonBall(entity as CannonBall, gameState.gameArea);
+        if (updated) updatedEntities.push(updated);
         break;
+      }
       default:
-        updatedEntities.push(entity)
+        updatedEntities.push(entity);
     }
-  })
+  }
   
   // Добавляем новые зоны опасности
   updatedEntities.push(...hazardZonesToAdd);
@@ -1303,30 +1311,28 @@ export function updateGameEntities(gameState: GameState, config: GameConfig): Ga
   updatedEntities = updateHazardZones(updatedEntities);
 
   // Проверяем мутации врагов в зонах опасности
-  const [mutatedEntities, updatedEncounteredEnemies] = checkEnemyMutations(updatedEntities, newGameState);
+  const [mutatedEntities, updatedEncounteredEnemies] = checkEnemyMutations(updatedEntities, gameState);
   updatedEntities = mutatedEntities;
-  newGameState.encounteredEnemies = updatedEncounteredEnemies;
+  gameState.encounteredEnemies = updatedEncounteredEnemies;
 
-  // Проверяем попадания снарядов пушки
-  const cannonBalls = updatedEntities.filter(e => e.type === 'cannon-ball') as CannonBall[];
+  // Проверяем попадания снарядов пушки - оптимизация: один проход
   let totalBossesDefeated = 0;
-  for (const cannonBall of cannonBalls) {
-    const [entitiesAfterHit, hitSomething, bossDefeated] = checkCannonBallHit(cannonBall, updatedEntities);
-    if (bossDefeated) {
-      totalBossesDefeated++;
-    }
-    if (hitSomething) {
-      // Удаляем снаряд после попадания
-      updatedEntities = entitiesAfterHit.filter(e => e.id !== cannonBall.id);
-    } else {
-      updatedEntities = entitiesAfterHit;
+  for (let i = updatedEntities.length - 1; i >= 0; i--) {
+    const entity = updatedEntities[i];
+    if (entity.type === 'cannon-ball') {
+      const [entitiesAfterHit, hitSomething, bossDefeated] = checkCannonBallHit(entity as CannonBall, updatedEntities);
+      if (bossDefeated) totalBossesDefeated++;
+      if (hitSomething) {
+        updatedEntities.splice(i, 1); // Удаляем снаряд
+      } else {
+        updatedEntities = entitiesAfterHit;
+      }
     }
   }
   
   // Обновляем счетчик побежденных боссов
   if (totalBossesDefeated > 0) {
-    // Это будет обработано в GameCanvas через колбэк
-    newGameState.defeatedBossesThisUpdate = totalBossesDefeated;
+    gameState.defeatedBossesThisUpdate = totalBossesDefeated;
   }
 
   // Проверяем столкновения между сущностями
@@ -1340,17 +1346,19 @@ export function updateGameEntities(gameState: GameState, config: GameConfig): Ga
     }
   }
 
-  newGameState.entities = updatedEntities;
+  gameState.entities = updatedEntities;
 
-  // Проверка столкновения игрока с бонусами
-  const bonuses = newGameState.entities.filter(e => e.type === 'bonus') as Bonus[];
-  for (const bonus of bonuses) {
-    if (checkCollision({ ...newGameState.player.position, size: newGameState.player.size }, bonus)) {
-      newGameState = applyBonus(newGameState, bonus, config);
+  // Проверка столкновения игрока с бонусами - оптимизация: один проход
+  for (let i = updatedEntities.length - 1; i >= 0; i--) {
+    const entity = updatedEntities[i];
+    if (entity.type === 'bonus') {
+      if (checkCollision(gameState.player as any, entity)) {
+        gameState = applyBonus(gameState, entity as Bonus, config);
+      }
     }
   }
 
-  return newGameState;
+  return gameState;
 }
 
 // Функция для вычисления текущих интервалов спавна на основе времени игры и коэффициента сложности

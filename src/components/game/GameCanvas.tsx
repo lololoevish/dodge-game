@@ -92,7 +92,8 @@ export function GameCanvas({ gameState, onGameOver, onScoreUpdate, onEncountered
   const lastContaminationZoneSpawnRef = useRef<number>(0)
   const [windowSize, setWindowSize] = useState(getWindowDimensions());
 
-  const [gameConfig, setGameConfig] = useState<GameConfig>(() => ({
+  // Оптимизация: конфиг создается один раз, а не в каждом рендере
+  const gameConfigRef = useRef<GameConfig>({
     gameWidth: getWindowDimensions().width,
     gameHeight: getWindowDimensions().height,
     playerSize: 12,
@@ -104,10 +105,9 @@ export function GameCanvas({ gameState, onGameOver, onScoreUpdate, onEncountered
     circleSpawnTime: 30000,
     starSpawnTime: 40000,
     starSize: 24,
-    starShootInterval: 20000, // 20 секунд
+    starShootInterval: 20000,
     projectileSize: 8,
     projectileSpeed: 4,
-    // Новые фигуры
     triangleSize: 18,
     triangleSpawnTime: 15000,
     pentagonSize: 22,
@@ -123,40 +123,31 @@ export function GameCanvas({ gameState, onGameOver, onScoreUpdate, onEncountered
     laserSpawnTime: 70000,
     teleportCubeSize: 18,
     teleportCubeSpawnTime: 80000,
-    // Новые враги
     spinnerSize: 16,
     spinnerSpawnTime: 90000,
     ghostBallSize: 20,
     ghostBallSpawnTime: 100000,
-    // Параметры нарастающей сложности
-    minSpawnTime: 2000, // Минимальный интервал спавна (2 секунды)
-    difficultyIncreaseRate: 0.95, // Каждые 10 секунд интервалы уменьшаются на 5%
-    difficultyUpdateInterval: 10000, // Обновление сложности каждые 10 секунд
-    // Новые параметры для змейки
+    minSpawnTime: 2000,
+    difficultyIncreaseRate: 0.95,
+    difficultyUpdateInterval: 10000,
     snakeSegmentSize: 16,
-    snakeSegmentSpawnTime: 110000, // 110 секунд
-    // Параметры для новых фигур
+    snakeSegmentSpawnTime: 110000,
     pulsatingSphereSize: 20,
     pulsatingSphereSpawnTime: 45000,
     patrolSquareSize: 18,
     patrolSquareSpawnTime: 35000,
-    gravityTrapSize: 25,
-    gravityTrapSpawnTime: 80000,
     reflectingProjectileSize: 10,
     reflectingProjectileSpawnTime: 50000,
-    // Бонусы
-    bonusSpawnTime: 8000, // Уменьшил для более частого появления
+    bonusSpawnTime: 8000,
     bonusSize: 15,
     shieldDuration: 5000,
     slowEnemiesDuration: 8000,
     sizeUpDuration: 15000,
     invisibilityDuration: 7000,
     extraTimeAmount: 10,
-    // Параметры для боссов
     bossSize: 60,
     bossHealth: 5,
     bossAttackInterval: 3000,
-    // Параметры для пушки
     cannonDuration: 30000,
     cannonBallSpeed: 8,
     cannonBallDamage: 1,
@@ -166,10 +157,10 @@ export function GameCanvas({ gameState, onGameOver, onScoreUpdate, onEncountered
     phantomDuplicatorSpawnTime: 120000,
     contaminationZoneSize: 30,
     contaminationZoneSpawnTime: 130000,
-  }))
+  })
   
   const [localGameState, setLocalGameState] = useState<GameState>(() => 
-    createInitialGameState(gameConfig)
+    createInitialGameState(gameConfigRef.current)
   )
 
   // Обновление размеров при изменении размера окна
@@ -178,16 +169,15 @@ export function GameCanvas({ gameState, onGameOver, onScoreUpdate, onEncountered
       const handleResize = () => {
         const newDimensions = getWindowDimensions();
         
-        setGameConfig(prevConfig => {
-          if (prevConfig.gameWidth !== newDimensions.width || prevConfig.gameHeight !== newDimensions.height) {
-            return {
-              ...prevConfig,
-              gameWidth: newDimensions.width,
-              gameHeight: newDimensions.height
-            }
+        // Оптимизация: прямое обновление ref вместо setState
+        if (gameConfigRef.current.gameWidth !== newDimensions.width || 
+            gameConfigRef.current.gameHeight !== newDimensions.height) {
+          gameConfigRef.current = {
+            ...gameConfigRef.current,
+            gameWidth: newDimensions.width,
+            gameHeight: newDimensions.height
           }
-          return prevConfig
-        })
+        }
         
         setWindowSize(newDimensions);
         
@@ -213,7 +203,7 @@ export function GameCanvas({ gameState, onGameOver, onScoreUpdate, onEncountered
 
   // Инициализация игры
   const startGame = useCallback(() => {
-    const currentConfig = {
+    const currentConfig: GameConfig = {
       gameWidth: getWindowDimensions().width,
       gameHeight: getWindowDimensions().height,
       playerSize: 12,
@@ -255,35 +245,40 @@ export function GameCanvas({ gameState, onGameOver, onScoreUpdate, onEncountered
       difficultyUpdateInterval: 8000,
       // Новые параметры для змейки
       snakeSegmentSize: 16,
-      snakeSegmentSpawnTime: 110000, // 110 секунд
+      snakeSegmentSpawnTime: 110000,
       // Параметры для новых фигур
       pulsatingSphereSize: 20,
       pulsatingSphereSpawnTime: 45000,
       patrolSquareSize: 18,
       patrolSquareSpawnTime: 35000,
-      gravityTrapSize: 25,
-      gravityTrapSpawnTime: 80000,
       reflectingProjectileSize: 10,
       reflectingProjectileSpawnTime: 50000,
-      bonusSpawnTime: 8000, // Уменьшил для более частого появления
+      // Бонусы
+      bonusSpawnTime: 8000,
       bonusSize: 15,
       shieldDuration: 5000,
       slowEnemiesDuration: 8000,
       sizeUpDuration: 15000,
       invisibilityDuration: 7000,
       extraTimeAmount: 10,
-    }
-    const currentConfigWithNewEnemies = {
-      ...currentConfig,
+      // Новые параметры для врагов
       crystalControllerSize: 24,
       crystalControllerSpawnTime: 110000,
       phantomDuplicatorSize: 18,
       phantomDuplicatorSpawnTime: 120000,
       contaminationZoneSize: 30,
       contaminationZoneSpawnTime: 130000,
+      // Параметры для боссов
+      bossSize: 60,
+      bossHealth: 5,
+      bossAttackInterval: 3000,
+      // Параметры для пушки
+      cannonDuration: 30000,
+      cannonBallSpeed: 8,
+      cannonBallDamage: 1,
     }
     
-    const initialState = createInitialGameState(currentConfigWithNewEnemies as GameConfig)
+    const initialState = createInitialGameState(currentConfig)
     const newState = {
       ...initialState,
       isPlaying: true,
@@ -427,94 +422,14 @@ export function GameCanvas({ gameState, onGameOver, onScoreUpdate, onEncountered
     newState.score = newScore
     onScoreUpdate(newScore)
 
-    // Получаем текущие значения конфигурации игры напрямую
-    const baseConfig = {
-      chaserSpawnTime: 6000, // Уменьшили до 6 секунд
-      circleSpawnTime: 20000, // Уменьшили до 20 секунд
-      starSpawnTime: 30000, // Уменьшили до 30 секунд
-      starShootInterval: 15000, // Уменьшили до 15 секунд
-      gameWidth: getWindowDimensions().width,
-      gameHeight: getWindowDimensions().height,
-      playerSize: 10, // Уменьшили размер игрока
-      chaserSize: 22, // Увеличили размер врага
-      circleSize: 22, // Увеличили размер врага
-      chaserSpeed: 2.5, // Увеличили скорость врага
-      circleSpeed: 3.5, // Увеличили скорость врага
-      starSize: 26, // Увеличили размер врага
-      projectileSize: 9, // Увеличили размер снаряда
-      projectileSpeed: 5, // Увеличили скорость снаряда
-      // Новые фигуры
-      triangleSize: 20, // Увеличили размер врага
-      triangleSpawnTime: 10000, // Уменьшили до 10 секунд
-      pentagonSize: 24, // Увеличили размер врага
-      pentagonSpawnTime: 18000, // Уменьшили до 18 секунд
-      lightningSize: 18, // Увеличили размер врага
-      lightningSpawnTime: 22000, // Уменьшили до 22 секунд
-      fireSize: 16, // Увеличили размер врага
-      fireSpawnTime: 1200, // Уменьшили до 12 секунд
-      diagonalSize: 20, // Увеличили размер врага
-      diagonalSpawnTime: 40000, // Уменьшили до 40 секунд
-      mineSize: 14, // Увеличили размер врага
-      mineSpawnTime: 35000, // Уменьшили до 35 секунд
-      laserSpawnTime: 50000, // Уменьшили до 50 секунд
-      teleportCubeSize: 20, // Увеличили размер врага
-      teleportCubeSpawnTime: 6000, // Уменьшили до 60 секунд
-      // Новые враги
-      spinnerSize: 18, // Увеличили размер врага
-      spinnerSpawnTime: 70000, // Уменьшили до 70 секунд
-      ghostBallSize: 22, // Увеличили размер врага
-      ghostBallSpawnTime: 80000, // Уменьшили до 80 секунд
-      // Параметры нарастающей сложности
-      minSpawnTime: 300, // Уменьшили минимальное время до 0.3 секунд
-      difficultyIncreaseRate: 0.85, // Увеличили скорость увеличения сложности (15% уменьшение за интервал)
-      difficultyUpdateInterval: 5000, // Обновление сложности каждые 5 секунд
-      // Новые параметры для змейки
-      snakeSegmentSize: 16,
-      snakeSegmentSpawnTime: 10000, // 110 секунд
-      // Параметры для новых фигур
-      pulsatingSphereSize: 20,
-      pulsatingSphereSpawnTime: 45000, // 45 секунд
-      patrolSquareSize: 18,
-      patrolSquareSpawnTime: 35000, // 35 секунд
-      gravityTrapSize: 25,
-      gravityTrapSpawnTime: 800, // 80 секунд
-      reflectingProjectileSize: 10,
-      reflectingProjectileSpawnTime: 50000, // 50 секунд
-      bonusSpawnTime: 8000, // Уменьшил для более частого появления
-      bonusSize: 15,
-      shieldDuration: 5000,
-      slowEnemiesDuration: 8000,
-      sizeUpDuration: 15000,
-      invisibilityDuration: 7000,
-      extraTimeAmount: 10,
-      // Параметры для боссов
-      bossSize: 60,
-      bossHealth: 5,
-      bossAttackInterval: 3000,
-      // Параметры для пушки
-      cannonDuration: 30000,
-      cannonBallSpeed: 8,
-      cannonBallDamage: 1,
-    }
-    const currentConfigWithNewEnemies = {
-      ...baseConfig,
-      crystalControllerSize: 24,
-      crystalControllerSpawnTime: 110000,
-      phantomDuplicatorSize: 18,
-      phantomDuplicatorSpawnTime: 120000,
-      contaminationZoneSize: 30,
-      contaminationZoneSpawnTime: 130000,
-    }
-
+    // Оптимизация: используем кэшированный конфиг и обновляем только динамические значения
+    const baseConfig = gameConfigRef.current
+    
     // Вычисляем текущие интервалы спавна на основе времени игры
-    const currentSpawnIntervals = calculateCurrentSpawnIntervals(currentConfigWithNewEnemies as GameConfig, elapsedTime)
-    const currentConfig = {
-      ...baseConfig,
-      ...currentSpawnIntervals,
-      crystalControllerSize: 24,
-      phantomDuplicatorSize: 18,
-      contaminationZoneSize: 30,
-    } as GameConfig
+    const currentSpawnIntervals = calculateCurrentSpawnIntervals(baseConfig, elapsedTime)
+    
+    // Оптимизация: создаем новый объект конфига только с измененными полями
+    const currentConfig: GameConfig = Object.assign({}, baseConfig, currentSpawnIntervals)
 
     // Спавним чейзера через 10 секунд
     if (elapsedTime >= currentConfig.chaserSpawnTime && 
@@ -661,10 +576,14 @@ export function GameCanvas({ gameState, onGameOver, onScoreUpdate, onEncountered
       }
     })
 
+    // Оптимизация: считаем бонусы один проходом
+    let previousBonusCount = 0
+    for (const e of newState.entities) {
+      if (e.type === 'bonus') previousBonusCount++
+    }
+    
     // Обновляем позиции объектов
-    const previousBonusCount = newState.entities.filter(e => e.type === 'bonus').length
     newState = updateGameEntities(newState, currentConfig)
-    const currentBonusCount = newState.entities.filter(e => e.type === 'bonus').length
     
     // Обновляем снаряды пушки
     newState = updateCannonBalls(newState)
@@ -672,13 +591,19 @@ export function GameCanvas({ gameState, onGameOver, onScoreUpdate, onEncountered
     // Проверяем попадания снарядов
     newState = checkCannonBallHits(newState)
     
+    // Оптимизация: считаем бонусы после обновления
+    let currentBonusCount = 0
+    for (const e of newState.entities) {
+      if (e.type === 'bonus') currentBonusCount++
+    }
+    
     // Если количество бонусов уменьшилось, значит игрок собрал бонус
     if (previousBonusCount > currentBonusCount && onBonusCollected) {
-      // Найдем какой бонус был собран (это упрощение, в реальности нужно отслеживать конкретный тип)
-      // Для простоты будем считать что собран случайный бонус
-      const bonusTypes = Object.values(BonusType)
-      const randomBonusType = bonusTypes[Math.floor(Math.random() * bonusTypes.length)]
-      onBonusCollected(randomBonusType)
+      // Находим собранный бонус более эффективным способом
+      const collectedBonus = newState.activeBonuses[newState.activeBonuses.length - 1]
+      if (collectedBonus) {
+        onBonusCollected(collectedBonus.type)
+      }
     }
     
     // Проверяем, были ли побеждены боссы
